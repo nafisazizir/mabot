@@ -23,18 +23,20 @@ import {
 import { Gary } from "./mascot/gary";
 import { GLYPH_NAMES, GlyphIcon, type Glyph } from "./mascot/glyphs";
 import { Mascot, type Eyes, type MascotHandle, type Mood } from "./mascot/mascot";
+import { Squircle } from "./mascot/squircle";
 
-type Variant = "gary" | "dot";
+type Variant = "squircle" | "dot" | "gary";
 
 const VARIANTS: { value: Variant; name: string }[] = [
-  { value: "gary", name: "Gary" },
+  { value: "squircle", name: "Squircle" },
   { value: "dot", name: "Dot" },
+  { value: "gary", name: "Gary" },
 ];
 
-/** Hand-picked casts, one per variant, and the ziiz cast shared by both. */
-const PALETTES: { name: string; dot: Character[]; gary: GaryCharacter[] }[] = [
-  { name: "Custom", dot: CHARACTERS, gary: GARYS },
-  { name: "ziiz", dot: ZIIZ_CHARACTERS, gary: ZIIZ_GARYS },
+/** Hand-picked casts, one per variant, and the ziiz cast shared by all. The squircle wears the dot's flat colours. */
+const PALETTES: { name: string; squircle: Character[]; dot: Character[]; gary: GaryCharacter[] }[] = [
+  { name: "Custom", squircle: CHARACTERS, dot: CHARACTERS, gary: GARYS },
+  { name: "ziiz", squircle: ZIIZ_CHARACTERS, dot: ZIIZ_CHARACTERS, gary: ZIIZ_GARYS },
 ];
 
 /** Everything that decides how a mascot looks. Each sidebar section varies one of these. */
@@ -48,10 +50,10 @@ const cast = ({ variant, palette, character }: Look) => {
 export function Playground() {
   const mascot = useRef<MascotHandle>(null);
   const [look, setLook] = useState<Look>({
-    variant: "gary",
+    variant: "squircle",
     palette: 0,
     character: 0,
-    eyes: GARYS[0].eyes,
+    eyes: CHARACTERS[0].eyes,
     mood: "idle",
   });
   const [follow, setFollow] = useState(true);
@@ -84,7 +86,18 @@ export function Playground() {
     <TooltipProvider delay={300}>
       <div className="flex min-h-svh flex-col md:h-svh md:flex-row md:overflow-hidden">
         <main className="relative flex min-h-[60svh] flex-1 items-center justify-center overflow-hidden">
-          {look.variant === "dot" ? (
+          {look.variant === "squircle" ? (
+            <Squircle
+              ref={mascot}
+              label={`Animate ${c.name}`}
+              color={c.color}
+              ink={c.ink}
+              eyes={look.eyes}
+              mood={look.mood}
+              follow={follow}
+              className="size-56 md:size-72"
+            />
+          ) : look.variant === "dot" ? (
             <Mascot
               ref={mascot}
               label={`Animate ${c.name}`}
@@ -135,7 +148,7 @@ export function Playground() {
             <EdgeFade side="top" visible={edges.top} className="hidden md:block" />
             <div className="flex flex-col gap-8 p-5">
               <Section label="Variant">
-                <Choice value={look.variant} onChange={(v) => set({ variant: v as Variant })} className="grid-cols-2">
+                <Choice value={look.variant} onChange={(v) => set({ variant: v as Variant })} className="grid-cols-3">
                   {VARIANTS.map((v) => (
                     <Tile key={v.value} value={v.value} label={v.name} showLabel tall>
                       {(still) => <Thumb look={{ ...look, variant: v.value }} still={still} large />}
@@ -330,6 +343,7 @@ function Thumb({ look, still, large }: { look: Look; still: boolean; large?: boo
     follow: false,
     still,
   };
+  if (look.variant === "squircle") return <Squircle {...shared} className={large ? "size-14" : "size-10"} />;
   return look.variant === "dot" ? (
     <Mascot {...shared} className={large ? "size-14" : "size-10"} />
   ) : (
