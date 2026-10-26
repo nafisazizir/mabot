@@ -1,6 +1,6 @@
 // The squircle: a mascot built as a real solid in 3D rather than a disc
-// pretending to be a sphere. Units are like Gary's (about one unit from the
-// centre to a side), x right, y down, z toward the viewer.
+// pretending to be a sphere. Units are about one unit from the centre to a
+// side, x right, y down, z toward the viewer.
 //
 // The body is a superellipse extruded front to back, then grown by a ball of
 // radius `round` so every edge is soft. It's drawn in one flat colour, so its

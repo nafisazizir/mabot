@@ -1,4 +1,3 @@
-import type { GaryForm } from "./gary";
 import type { Eyes, Mood } from "./mascot";
 
 export type Character = {
@@ -33,25 +32,9 @@ export const PRESETS: { name: string; eyes: Eyes }[] = [
   { name: "Error", eyes: ["x", "x"] },
 ];
 
-export type GaryCharacter = Character & { beak: string };
-
-// Gold leads, with the beak one step darker than the head (lighter on
-// graphite).
-export const GARYS: GaryCharacter[] = [
-  { name: "Emas", color: "#f5b52e", beak: "#f07a1a", ink: "#0b0e13", eyes: ["^", "^"] },
-  { name: "Elang", color: "#9a5b34", beak: "#f0b43c", ink: "#0b0e13", eyes: ["o", "o"] },
-  { name: "Cloud", color: "#e3e7ec", beak: "#7d8793", ink: "#0b0e13", eyes: ["*", "*"] },
-  { name: "Violet", color: "#8b5cf6", beak: "#5b2fc9", ink: "#0b0e13", eyes: ["+", "+"] },
-  { name: "Sky", color: "#61bcff", beak: "#2a7fc4", ink: "#0b0e13", eyes: ["-", "-"] },
-  { name: "Graphite", color: "#262a31", beak: "#f5b52e", ink: "#f3f6fa", eyes: [">", "<"] },
-];
-
-/** Gary as it stands: the trimmed Sweep crest and the hook beak. */
-export const GARY_FORM: GaryForm = { beak: "hook", crest: "trim" };
-
 // The ziiz cast: one character per ziiz ramp, the same for every variant.
-// Heads are step 700 and beaks step 800, the solid steps, which
-// barely shift between light and dark (purple-700 is the exception).
+// Heads are step 700, the solid step, which barely shifts between light and
+// dark (purple-700 is the exception).
 const ds = (token: string) => `var(--ds-${token})`;
 
 const RAMPS: { name: string; ramp: string; eyes: Eyes }[] = [
@@ -73,17 +56,13 @@ const ziiz = ({ name, ramp, eyes }: (typeof RAMPS)[number]): Character => ({
 });
 
 // Pure black and white close the cast. Both stay put across themes, so one
-// of them always melts into the page; the mid-gray beak reads on either.
-const MONO: GaryCharacter[] = [
-  { name: "Black", color: ds("black"), ink: ds("white"), beak: ds("gray-700"), eyes: ["O", "O"] },
-  { name: "White", color: ds("white"), ink: ds("black"), beak: ds("gray-700"), eyes: ["^", "-"] },
+// of them always melts into the page.
+const MONO: Character[] = [
+  { name: "Black", color: ds("black"), ink: ds("white"), eyes: ["O", "O"] },
+  { name: "White", color: ds("white"), ink: ds("black"), eyes: ["^", "-"] },
 ];
 
 export const ZIIZ_CHARACTERS: Character[] = [...RAMPS.map(ziiz), ...MONO];
-export const ZIIZ_GARYS: GaryCharacter[] = [
-  ...RAMPS.map((r) => ({ ...ziiz(r), beak: ds(`${r.ramp}-800`) })),
-  ...MONO,
-];
 
 export const MOODS: { mood: Mood; name: string; hint: string }[] = [
   { mood: "idle", name: "Idle", hint: "Its own eyes; follows the cursor" },

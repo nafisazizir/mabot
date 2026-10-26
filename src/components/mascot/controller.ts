@@ -72,7 +72,6 @@ export class MascotController {
   private spin = spring();
   private spinTarget = 0;
   private eyeRot = spring();
-  private flap = spring();
   private grow = spring(1);
   private squash = spring(1);
   private ox = spring();
@@ -170,7 +169,6 @@ export class MascotController {
   /** Full 360° turn; swaps to a reaction face while it's turned away. */
   poke() {
     this.squash.v += 4;
-    this.flap.v += 10;
     const current = this.shownFace ?? this.options.eyes;
     const pool = REACTIONS.filter((r) => !sameEyes(r, current));
     const reaction = pool[Math.floor(Math.random() * pool.length)];
@@ -250,7 +248,6 @@ export class MascotController {
     if (this.reduced.matches) return;
     this.oy.v -= this.skin.radius(this.rect.width) * 9;
     this.squash.v += 3;
-    this.flap.v += 14;
   }
 
   private lookTarget(now: number, cx: number, cy: number, R: number) {
@@ -326,9 +323,6 @@ export class MascotController {
     // Working: plus eyes snap between ±15° and hold, never reaching an x.
     const rock = mood === "working" && !calm ? (now % 1200 < 600 ? 0.26 : -0.26) : 0;
     step(this.eyeRot, rock, 900, 40, dt);
-    // Underdamped, so a kick from a hop or poke flutters a few times. Carried
-    // mascots hold their crest up.
-    step(this.flap, this.dragging ? 1 : 0, 260, 7, dt);
 
     // Swap faces while both eyes are round the back.
     const turned = (((this.spin.x % TAU) + TAU) % TAU) - Math.PI;
@@ -405,7 +399,6 @@ export class MascotController {
         // A slight head tilt when looking off-axis.
         tilt: clamp(-this.yaw.x * this.pitch.x * 0.5, -0.3, 0.3),
         eyeRot: this.eyeRot.x,
-        flap: this.flap.x,
       },
       R,
     );
@@ -419,7 +412,6 @@ export class MascotController {
       settled(this.verge, look.verge) &&
       settled(this.spin, this.spinTarget) &&
       settled(this.eyeRot, 0) &&
-      settled(this.flap, 0) &&
       settled(this.ox, 0) &&
       settled(this.oy, 0) &&
       settled(this.grow, 1) &&

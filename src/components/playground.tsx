@@ -9,41 +9,29 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { EdgeFade } from "./edge-fade";
-import {
-  CHARACTERS,
-  GARYS,
-  GARY_FORM,
-  MOODS,
-  PRESETS,
-  ZIIZ_CHARACTERS,
-  ZIIZ_GARYS,
-  type Character,
-  type GaryCharacter,
-} from "./mascot/characters";
-import { Gary } from "./mascot/gary";
+import { CHARACTERS, MOODS, PRESETS, ZIIZ_CHARACTERS, type Character } from "./mascot/characters";
 import { GLYPH_NAMES, GlyphIcon, type Glyph } from "./mascot/glyphs";
 import { Mascot, type Eyes, type MascotHandle, type Mood } from "./mascot/mascot";
 import { Squircle } from "./mascot/squircle";
 
-type Variant = "squircle" | "dot" | "gary";
+type Variant = "squircle" | "dot";
 
 const VARIANTS: { value: Variant; name: string }[] = [
   { value: "squircle", name: "Squircle" },
   { value: "dot", name: "Dot" },
-  { value: "gary", name: "Gary" },
 ];
 
-/** Hand-picked casts, one per variant, and the ziiz cast shared by all. The squircle wears the dot's flat colours. */
-const PALETTES: { name: string; squircle: Character[]; dot: Character[]; gary: GaryCharacter[] }[] = [
-  { name: "Custom", squircle: CHARACTERS, dot: CHARACTERS, gary: GARYS },
-  { name: "ziiz", squircle: ZIIZ_CHARACTERS, dot: ZIIZ_CHARACTERS, gary: ZIIZ_GARYS },
+/** The hand-picked cast and the ziiz cast, shared by every variant. */
+const PALETTES: { name: string; characters: Character[] }[] = [
+  { name: "Custom", characters: CHARACTERS },
+  { name: "ziiz", characters: ZIIZ_CHARACTERS },
 ];
 
 /** Everything that decides how a mascot looks. Each sidebar section varies one of these. */
 type Look = { variant: Variant; palette: number; character: number; eyes: Eyes; mood: Mood };
 
-const cast = ({ variant, palette, character }: Look) => {
-  const list = PALETTES[palette][variant];
+const cast = ({ palette, character }: Look) => {
+  const list = PALETTES[palette].characters;
   return list[Math.min(character, list.length - 1)];
 };
 
@@ -97,7 +85,7 @@ export function Playground() {
               follow={follow}
               className="size-56 md:size-72"
             />
-          ) : look.variant === "dot" ? (
+          ) : (
             <Mascot
               ref={mascot}
               label={`Animate ${c.name}`}
@@ -107,19 +95,6 @@ export function Playground() {
               mood={look.mood}
               follow={follow}
               className="size-56 md:size-72"
-            />
-          ) : (
-            <Gary
-              ref={mascot}
-              label={`Animate ${c.name} Gary`}
-              color={c.color}
-              beak={(c as GaryCharacter).beak}
-              ink={c.ink}
-              eyes={look.eyes}
-              form={GARY_FORM}
-              mood={look.mood}
-              follow={follow}
-              className="size-72 md:size-96"
             />
           )}
 
@@ -148,7 +123,7 @@ export function Playground() {
             <EdgeFade side="top" visible={edges.top} className="hidden md:block" />
             <div className="flex flex-col gap-8 p-5">
               <Section label="Variant">
-                <Choice value={look.variant} onChange={(v) => set({ variant: v as Variant })} className="grid-cols-3">
+                <Choice value={look.variant} onChange={(v) => set({ variant: v as Variant })} className="grid-cols-2">
                   {VARIANTS.map((v) => (
                     <Tile key={v.value} value={v.value} label={v.name} showLabel tall>
                       {(still) => <Thumb look={{ ...look, variant: v.value }} still={still} large />}
@@ -168,7 +143,7 @@ export function Playground() {
                         className="grid-cols-4"
                         aria-label={`${p.name} characters`}
                       >
-                        {p[look.variant].map((ch, i) => (
+                        {p.characters.map((ch, i) => (
                           <Tile key={ch.name} value={String(i)} label={ch.name}>
                             {(still) => <Thumb look={{ ...look, palette: pi, character: i }} still={still} />}
                           </Tile>
@@ -343,10 +318,6 @@ function Thumb({ look, still, large }: { look: Look; still: boolean; large?: boo
     follow: false,
     still,
   };
-  if (look.variant === "squircle") return <Squircle {...shared} className={large ? "size-14" : "size-10"} />;
-  return look.variant === "dot" ? (
-    <Mascot {...shared} className={large ? "size-14" : "size-10"} />
-  ) : (
-    <Gary {...shared} beak={(c as GaryCharacter).beak} form={GARY_FORM} className={large ? "size-20" : "size-14"} />
-  );
+  const size = large ? "size-14" : "size-10";
+  return look.variant === "squircle" ? <Squircle {...shared} className={size} /> : <Mascot {...shared} className={size} />;
 }

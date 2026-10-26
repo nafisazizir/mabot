@@ -3,19 +3,10 @@
 
 export type Point = [number, number];
 
-const SAMPLES = 160;
-
 export function toPath(points: Point[]) {
   const f = (n: number) => n.toFixed(4);
   return `M${points.map(([x, y]) => `${f(x)} ${f(y)}`).join("L")}Z`;
 }
-
-/** Sample a closed curve over t ∈ [0, 2π). */
-export function sample(fn: (t: number) => Point, samples = SAMPLES) {
-  return Array.from({ length: samples }, (_, i) => fn((i / samples) * Math.PI * 2));
-}
-
-export const signedPow = (v: number, p: number) => Math.sign(v) * Math.abs(v) ** p;
 
 /**
  * Template tag for SVG attribute strings: rounds every number to 4 places, so
