@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agent Mascots",
+  title: "Mabot",
   description: "Sphere-faced mascots with cursor-following eyes.",
 };
 
