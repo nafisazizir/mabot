@@ -72,8 +72,18 @@ const ziiz = ({ name, ramp, eyes }: (typeof RAMPS)[number]): Character => ({
   eyes,
 });
 
-export const ZIIZ_CHARACTERS: Character[] = RAMPS.map(ziiz);
-export const ZIIZ_GARYS: GaryCharacter[] = RAMPS.map((r) => ({ ...ziiz(r), beak: ds(`${r.ramp}-800`) }));
+// Pure black and white close the cast. Both stay put across themes, so one
+// of them always melts into the page; the mid-gray beak reads on either.
+const MONO: GaryCharacter[] = [
+  { name: "Black", color: ds("black"), ink: ds("white"), beak: ds("gray-700"), eyes: ["O", "O"] },
+  { name: "White", color: ds("white"), ink: ds("black"), beak: ds("gray-700"), eyes: ["^", "-"] },
+];
+
+export const ZIIZ_CHARACTERS: Character[] = [...RAMPS.map(ziiz), ...MONO];
+export const ZIIZ_GARYS: GaryCharacter[] = [
+  ...RAMPS.map((r) => ({ ...ziiz(r), beak: ds(`${r.ramp}-800`) })),
+  ...MONO,
+];
 
 export const MOODS: { mood: Mood; name: string; hint: string }[] = [
   { mood: "idle", name: "Idle", hint: "Its own eyes; follows the cursor" },

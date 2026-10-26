@@ -4,7 +4,3 @@
 @import "@nafisazizir/ziiz/theme.css";
 
 @custom-variant dark (&:is(.dark *));
-
-html {
-  color-scheme: dark;
-}
