@@ -27,7 +27,7 @@ export interface Skin {
 /** Eyes sit 30° either side of the front, i.e. at ±R/2 when looking straight on. */
 const EYE_YAW = Math.PI / 6;
 
-type Projected = { x: number; y: number; sx: number; sy: number } | null;
+export type Projected = { x: number; y: number; sx: number; sy: number } | null;
 
 /** Project a point on a sphere of radius `r`. */
 function project(lon: number, lat: number, r: number): Projected {
@@ -48,23 +48,26 @@ function eyeLongitude(pose: Pose, side: -1 | 1) {
   return pose.yaw + pose.spin + side * (EYE_YAW - pose.verge);
 }
 
+/** Where each eye lands on a dot of radius `R`, or null when it's round the back. */
+export function sphereEyes(pose: Pose, R: number): [Projected, Projected] {
+  return [project(eyeLongitude(pose, -1), pose.pitch, R), project(eyeLongitude(pose, 1), pose.pitch, R)];
+}
+
 /** The DevDay dot: a flat disc with two glyph eyes. Writes CSS transforms in px. */
 export function sphereSkin(face: HTMLElement, eyes: [HTMLElement, HTMLElement]): Skin {
   return {
     radius: (width) => width / 2,
     render(pose, R) {
       face.style.transform = `rotate(${pose.tilt}rad)`;
-      for (let i = 0; i < 2; i++) {
-        const side = i === 0 ? -1 : 1;
-        const p = project(eyeLongitude(pose, side), pose.pitch, R);
+      sphereEyes(pose, R).forEach((p, i) => {
         const eye = eyes[i];
         if (!p) {
           eye.style.visibility = "hidden";
-          continue;
+          return;
         }
         eye.style.visibility = "visible";
         eye.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) rotate(${pose.eyeRot}rad) scale(${p.sx}, ${p.sy * pose.lid})`;
-      }
+      });
     },
   };
 }

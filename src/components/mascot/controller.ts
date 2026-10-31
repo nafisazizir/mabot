@@ -4,6 +4,9 @@ import type { Skin } from "./skins";
 
 export type Eyes = readonly [Glyph, Glyph];
 
+/** A head direction in radians: negative yaw turns to the viewer's left, positive pitch looks up. */
+export type Gaze = { yaw: number; pitch: number };
+
 /** What the agent behind the mascot is doing. */
 export type Mood = "idle" | "thinking" | "working" | "waiting" | "done" | "paused" | "error";
 
@@ -12,8 +15,8 @@ export type MascotOptions = {
   float: boolean;
   eyes: Eyes;
   mood: Mood;
-  /** Hold the head at this yaw (radians, negative turns to the viewer's left) instead of looking around. */
-  gaze?: number;
+  /** Rest facing this way instead of looking around; following the cursor still overrides it. */
+  gaze?: Gaze;
   /** Settle at rest and stop: no looking, blinking, bobbing or mood beats. */
   still?: boolean;
 };
@@ -37,7 +40,7 @@ const REACTIONS: Eyes[] = [
 ];
 
 /** Faces each mood forces; idle shows the mascot's own eyes. */
-function moodFace(mood: Mood, now: number): Eyes | null {
+export function moodFace(mood: Mood, now: number): Eyes | null {
   switch (mood) {
     case "thinking":
       return now % 1600 < 800 ? ["/", "/"] : ["\\", "\\"];
@@ -55,6 +58,9 @@ function moodFace(mood: Mood, now: number): Eyes | null {
       return null;
   }
 }
+
+/** A slight head tilt when looking off-axis. */
+export const headTilt = (yaw: number, pitch: number) => clamp(-yaw * pitch * 0.5, -0.3, 0.3);
 
 const spring = (x = 0): Spring => ({ x, v: 0 });
 const settled = (s: Spring, target: number) => Math.abs(s.x - target) < 1e-3 && Math.abs(s.v) < 1e-3;
@@ -114,6 +120,9 @@ export class MascotController {
     private setFace: (eyes: Eyes | null) => void,
   ) {
     this.mood = options.mood;
+    // Start already facing the pose rather than swinging into it.
+    this.yaw.x = options.gaze?.yaw ?? 0;
+    this.pitch.x = options.gaze?.pitch ?? 0;
     this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     // The button itself never moves (all motion is on inner layers), so its
@@ -260,8 +269,8 @@ export class MascotController {
       };
     }
 
-    if (this.options.gaze !== undefined) return { yaw: this.options.gaze, pitch: 0, verge: 0 };
-    if (this.options.still) return { yaw: 0, pitch: 0, verge: 0 };
+    const gaze = this.options.gaze;
+    if (this.options.still) return { yaw: gaze?.yaw ?? 0, pitch: gaze?.pitch ?? 0, verge: 0 };
 
     // Busy moods look at their own work rather than the cursor.
     switch (this.mood) {
@@ -288,6 +297,8 @@ export class MascotController {
         verge: MAX_VERGE * near * near,
       };
     }
+
+    if (gaze) return { yaw: gaze.yaw, pitch: gaze.pitch, verge: 0 };
 
     if (now > this.nextIdle) {
       const center = Math.random() < 0.3;
@@ -396,8 +407,7 @@ export class MascotController {
         verge: this.verge.x,
         spin: this.spin.x,
         lid,
-        // A slight head tilt when looking off-axis.
-        tilt: clamp(-this.yaw.x * this.pitch.x * 0.5, -0.3, 0.3),
+        tilt: headTilt(this.yaw.x, this.pitch.x),
         eyeRot: this.eyeRot.x,
       },
       R,

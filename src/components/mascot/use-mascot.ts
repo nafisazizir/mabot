@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
-import { MascotController, type Eyes, type Mood } from "./controller";
+import { MascotController, type Eyes, type Gaze, type Mood } from "./controller";
 import type { Skin } from "./skins";
 
 export type MascotHandle = {
@@ -18,8 +18,8 @@ export type MascotBehavior = {
   /** Gentle idle bob. */
   float?: boolean;
   mood?: Mood;
-  /** Hold the head at this yaw (radians, negative turns to the viewer's left) instead of looking around. */
-  gaze?: number;
+  /** Rest facing this way instead of looking around. Pass a stable object; it's an effect dependency. */
+  gaze?: Gaze;
   /** Settle at rest and stop, for thumbnails. */
   still?: boolean;
   ref?: Ref<MascotHandle>;

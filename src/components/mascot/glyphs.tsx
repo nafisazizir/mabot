@@ -1,7 +1,7 @@
 // Eye glyphs drawn on a 24×24 grid, centred on (12, 12). Stroked unless
 // `fill` is set, so they read like a medium-weight sans at any size.
 
-const GLYPHS = {
+export const GLYPHS = {
   o: { d: "M12 6.5a5.5 5.5 0 1 1 0 11a5.5 5.5 0 1 1 0-11Z" },
   O: { d: "M12 4.5a7.5 7.5 0 1 1 0 15a7.5 7.5 0 1 1 0-15Z" },
   "^": { d: "M4.5 17 12 7l7.5 10" },
@@ -16,6 +16,7 @@ const GLYPHS = {
   "=": { d: "M5 9h14M5 15h14" },
   "/": { d: "M8 19 16 5" },
   "\\": { d: "M8 5l8 14" },
+  "|": { d: "M12 5v14" },
   "@": { d: "M10 13a2 2 0 0 1 4 0a4 4 0 0 1-8 0a6 6 0 0 1 12 0" },
   "•": { d: "M12 8a4 4 0 1 1 0 8a4 4 0 1 1 0-8Z", fill: true },
   "♥": {

@@ -22,6 +22,10 @@ export type SquircleVariant = {
   /** Superellipse exponent of the front and back: 2 is an ellipse, higher is squarer. */
   exponent: number;
   eyes: EyePlacement;
+  /** Rings round each rounded edge; more keeps a big rounding smooth. */
+  bevelSteps?: number;
+  /** Points round the outline, a multiple of 4; more keeps a big render smooth. */
+  steps?: number;
 };
 
 // ── Vector maths ──────────────────────────────────────────────────────────
@@ -72,9 +76,15 @@ const BEVEL_STEPS = 3;
  * The surface as a stack of rings: the back cap, round the back edge, along
  * the wall, round the front edge, and the front cap.
  */
-function rings({ size: [a, b, c], round: r, exponent: n }: SquircleVariant): Vec3[][] {
-  const outline = Array.from({ length: STEPS }, (_, i) => {
-    const t = (i / STEPS) * Math.PI * 2;
+function rings({
+  size: [a, b, c],
+  round: r,
+  exponent: n,
+  bevelSteps = BEVEL_STEPS,
+  steps = STEPS,
+}: SquircleVariant): Vec3[][] {
+  const outline = Array.from({ length: steps }, (_, i) => {
+    const t = (i / steps) * Math.PI * 2;
     const [ct, st] = [Math.cos(t), Math.sin(t)];
     const x = a * Math.sign(ct) * Math.abs(ct) ** (2 / n);
     const y = b * Math.sign(st) * Math.abs(st) ** (2 / n);
@@ -91,8 +101,8 @@ function rings({ size: [a, b, c], round: r, exponent: n }: SquircleVariant): Vec
     return outline.map(({ x, y, nx, ny }): Vec3 => [x + nx * r * out, y + ny * r * out, z + r * up]);
   };
   const bevel = (side: -1 | 1) =>
-    Array.from({ length: BEVEL_STEPS + 1 }, (_, k) =>
-      ring(side * c, (side * (k / BEVEL_STEPS) * Math.PI) / 2),
+    Array.from({ length: bevelSteps + 1 }, (_, k) =>
+      ring(side * c, (side * (k / bevelSteps) * Math.PI) / 2),
     );
   return [...bevel(-1).reverse(), ...bevel(1)];
 }

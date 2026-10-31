@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { IconEye, IconPointer, IconPointerFilled, IconRotate360 } from "@tabler/icons-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { IconDownload, IconEye, IconPointer, IconPointerFilled, IconRotate360 } from "@tabler/icons-react";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { FieldLegend, FieldSet } from "@/components/ui/field";
+import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { EdgeFade } from "./edge-fade";
-import { CHARACTERS, MOODS, PRESETS, ZIIZ_CHARACTERS, type Character } from "./mascot/characters";
+import { CHARACTERS, MOODS, POSES, PRESETS, ZIIZ_CHARACTERS, type Character } from "./mascot/characters";
+import { ExportDialog } from "./export-dialog";
+import type { Still } from "./mascot/export";
 import { GLYPH_NAMES, GlyphIcon, type Glyph } from "./mascot/glyphs";
 import { Mascot, type Eyes, type MascotHandle, type Mood } from "./mascot/mascot";
 import { Squircle } from "./mascot/squircle";
@@ -27,10 +31,31 @@ const PALETTES: { name: string; characters: Character[] }[] = [
   { name: "ziiz", characters: ZIIZ_CHARACTERS },
 ];
 
-/** Everything that decides how a mascot looks. Each sidebar section varies one of these. */
-type Look = { variant: Variant; palette: number; character: number; eyes: Eyes; mood: Mood };
+const noop = () => () => {};
 
-const cast = ({ palette, character }: Look) => {
+const ZIIZ = PALETTES.findIndex((p) => p.characters === ZIIZ_CHARACTERS);
+
+/** The ziiz character that contrasts with the theme: black on light, white on dark. */
+const contrasting = (dark: boolean) => ZIIZ_CHARACTERS.findIndex((c) => c.name === (dark ? "White" : "Black"));
+
+/**
+ * Everything that decides how a mascot looks. Each sidebar section varies one
+ * of these. `auto` follows the theme until a character is picked.
+ */
+type Look = {
+  variant: Variant;
+  palette: number;
+  character: number;
+  auto: boolean;
+  eyes: Eyes;
+  mood: Mood;
+  pose: number;
+};
+
+const cast = ({ palette, character, auto }: Look, dark = false): Character => {
+  // CSS swaps the colours with the theme, so it's right from the first paint,
+  // before the theme is known here.
+  if (auto) return { ...ZIIZ_CHARACTERS[contrasting(dark)], color: "var(--mascot-auto)", ink: "var(--mascot-auto-ink)" };
   const list = PALETTES[palette].characters;
   return list[Math.min(character, list.length - 1)];
 };
@@ -39,12 +64,15 @@ export function Playground() {
   const mascot = useRef<MascotHandle>(null);
   const [look, setLook] = useState<Look>({
     variant: "squircle",
-    palette: 0,
-    character: 0,
-    eyes: CHARACTERS[0].eyes,
+    palette: ZIIZ,
+    character: contrasting(false),
+    auto: true,
+    eyes: PRESETS.find((p) => p.name === "Sparkle")!.eyes,
     mood: "idle",
+    pose: 0,
   });
-  const [follow, setFollow] = useState(true);
+  // Off by default so the pose holds; on, it tracks the cursor and returns to the pose when idle.
+  const [follow, setFollow] = useState(false);
 
   // Which ends of the sidebar have more to scroll to, for the edge fades.
   const scroller = useRef<HTMLDivElement>(null);
@@ -67,7 +95,16 @@ export function Playground() {
   const setEye = (side: 0 | 1, glyph: Glyph) =>
     set({ eyes: side === 0 ? [glyph, look.eyes[1]] : [look.eyes[0], glyph] });
 
-  const c = cast(look);
+  // The server can't know the theme, so the first client render mustn't either.
+  const { resolvedTheme } = useTheme();
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const dark = mounted && resolvedTheme === "dark";
+  const c = cast(look, dark);
+  // The tile to show as picked: following the theme, it's that theme's.
+  const selected = look.auto ? (mounted ? { palette: ZIIZ, character: contrasting(dark) } : null) : look;
+  const pose = POSES[look.pose];
+  const still: Still = { variant: look.variant, color: c.color, ink: c.ink, eyes: look.eyes, mood: look.mood, gaze: pose.gaze };
+  const fileName = `${c.name}-${pose.name}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const expression = PRESETS.find((p) => p.eyes[0] === look.eyes[0] && p.eyes[1] === look.eyes[1]);
 
   return (
@@ -83,6 +120,7 @@ export function Playground() {
               eyes={look.eyes}
               mood={look.mood}
               follow={follow}
+              gaze={POSES[look.pose].gaze}
               className="size-56 md:size-72"
             />
           ) : (
@@ -94,6 +132,7 @@ export function Playground() {
               eyes={look.eyes}
               mood={look.mood}
               follow={follow}
+              gaze={POSES[look.pose].gaze}
               className="size-56 md:size-72"
             />
           )}
@@ -111,6 +150,17 @@ export function Playground() {
               {follow ? <IconPointerFilled data-icon="inline-start" /> : <IconPointer data-icon="inline-start" />}
               Follow
             </Toggle>
+            <Separator orientation="vertical" className="mx-1 h-4 self-center" />
+            <ExportDialog
+              still={still}
+              name={fileName}
+              trigger={
+                <Button variant="ghost" size="sm" shape="rounded">
+                  <IconDownload data-icon="inline-start" />
+                  Export
+                </Button>
+              }
+            />
           </div>
         </main>
 
@@ -132,20 +182,30 @@ export function Playground() {
                 </Choice>
               </Section>
 
+              <Section label="Pose">
+                <Choice value={String(look.pose)} onChange={(i) => set({ pose: Number(i) })} className="grid-cols-4">
+                  {POSES.map((p, i) => (
+                    <Tile key={p.name} value={String(i)} label={p.name} showLabel>
+                      {(still) => <Thumb look={{ ...look, pose: i }} still={still} />}
+                    </Tile>
+                  ))}
+                </Choice>
+              </Section>
+
               <Section label="Character">
                 <div className="flex flex-col gap-4">
                   {PALETTES.map((p, pi) => (
                     <div key={p.name} className="flex flex-col gap-2">
                       <span className="text-label-12 text-gray-900">{p.name}</span>
                       <Choice
-                        value={pi === look.palette ? String(look.character) : ""}
-                        onChange={(i) => set({ palette: pi, character: Number(i) })}
+                        value={selected?.palette === pi ? String(selected.character) : ""}
+                        onChange={(i) => set({ palette: pi, character: Number(i), auto: false })}
                         className="grid-cols-4"
                         aria-label={`${p.name} characters`}
                       >
                         {p.characters.map((ch, i) => (
                           <Tile key={ch.name} value={String(i)} label={ch.name}>
-                            {(still) => <Thumb look={{ ...look, palette: pi, character: i }} still={still} />}
+                            {(still) => <Thumb look={{ ...look, palette: pi, character: i, auto: false }} still={still} />}
                           </Tile>
                         ))}
                       </Choice>
@@ -316,6 +376,7 @@ function Thumb({ look, still, large }: { look: Look; still: boolean; large?: boo
     eyes: look.eyes,
     mood: look.mood,
     follow: false,
+    gaze: POSES[look.pose].gaze,
     still,
   };
   const size = large ? "size-14" : "size-10";

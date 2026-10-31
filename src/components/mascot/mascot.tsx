@@ -7,7 +7,7 @@ import { GlyphIcon } from "./glyphs";
 import { sphereSkin } from "./skins";
 import { useMascot, type MascotBehavior } from "./use-mascot";
 
-export type { Eyes, Mood } from "./controller";
+export type { Eyes, Gaze, Mood } from "./controller";
 export type { MascotHandle } from "./use-mascot";
 
 type MascotProps = MascotBehavior & {

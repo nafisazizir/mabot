@@ -19,7 +19,7 @@ import { useMascot, type MascotBehavior } from "./use-mascot";
 const OPTICAL_SCALE = 0.92;
 
 /** The box's width in squircle units. It turns and spins past its edges, so the SVG overflows. */
-const VIEW = (2 * halfWidth(SQUIRCLE)) / OPTICAL_SCALE;
+export const VIEW = (2 * halfWidth(SQUIRCLE)) / OPTICAL_SCALE;
 
 type SquircleProps = MascotBehavior & {
   color: string;

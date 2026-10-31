@@ -4,3 +4,16 @@
 @import "@nafisazizir/ziiz/theme.css";
 
 @custom-variant dark (&:is(.dark *));
+
+/* The default mascot contrasts with the page: ziiz black in light, ziiz white
+   in dark. Set in CSS so it's right from the first paint. */
+@layer base {
+  :root {
+    --mascot-auto: var(--ds-black);
+    --mascot-auto-ink: var(--ds-white);
+  }
+  .dark {
+    --mascot-auto: var(--ds-white);
+    --mascot-auto-ink: var(--ds-black);
+  }
+}

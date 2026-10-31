@@ -1,4 +1,4 @@
-import type { Eyes, Mood } from "./mascot";
+import type { Eyes, Gaze, Mood } from "./mascot";
 
 export type Character = {
   name: string;
@@ -24,6 +24,7 @@ export const PRESETS: { name: string; eyes: Eyes }[] = [
   { name: "Squeeze", eyes: [">", "<"] },
   { name: "Sleepy", eyes: ["-", "-"] },
   { name: "Sparkle", eyes: ["*", "*"] },
+  { name: "Pill", eyes: ["|", "|"] },
   { name: "Shocked", eyes: ["O", "O"] },
   { name: "Content", eyes: ["u", "u"] },
   { name: "Dizzy", eyes: ["@", "@"] },
@@ -72,4 +73,17 @@ export const MOODS: { mood: Mood; name: string; hint: string }[] = [
   { mood: "done", name: "Done", hint: "^ ^ with a little hop" },
   { mood: "paused", name: "Paused", hint: "- - and slow breathing" },
   { mood: "error", name: "Error", hint: "x x and a head shake" },
+];
+
+// Where the head rests when it isn't following the cursor. No gaze means it
+// looks around on its own.
+export const POSES: { name: string; gaze?: Gaze }[] = [
+  { name: "3/4 up", gaze: { yaw: 0.5, pitch: 0.35 } },
+  { name: "Front", gaze: { yaw: 0, pitch: 0 } },
+  { name: "3/4", gaze: { yaw: 0.5, pitch: 0 } },
+  { name: "Side", gaze: { yaw: 1.05, pitch: 0 } },
+  { name: "Up", gaze: { yaw: 0, pitch: 0.45 } },
+  { name: "Down", gaze: { yaw: 0, pitch: -0.35 } },
+  { name: "3/4 left", gaze: { yaw: -0.5, pitch: 0 } },
+  { name: "Wander" },
 ];
