@@ -18,10 +18,11 @@ import { GLYPH_NAMES, GlyphIcon, type Glyph } from "./mascot/glyphs";
 import { Mascot, type Eyes, type MascotHandle, type Mood } from "./mascot/mascot";
 import { Squircle } from "./mascot/squircle";
 
-type Variant = "squircle" | "dot";
+type Variant = "squircle" | "mini" | "dot";
 
 const VARIANTS: { value: Variant; name: string }[] = [
   { value: "squircle", name: "Squircle" },
+  { value: "mini", name: "Mini" },
   { value: "dot", name: "Dot" },
 ];
 
@@ -111,9 +112,10 @@ export function Playground() {
     <TooltipProvider delay={300}>
       <div className="flex min-h-svh flex-col md:h-svh md:flex-row md:overflow-hidden">
         <main className="relative flex min-h-[60svh] flex-1 items-center justify-center overflow-hidden">
-          {look.variant === "squircle" ? (
+          {look.variant !== "dot" ? (
             <Squircle
               ref={mascot}
+              shape={look.variant}
               label={`Animate ${c.name}`}
               color={c.color}
               ink={c.ink}
@@ -173,7 +175,7 @@ export function Playground() {
             <EdgeFade side="top" visible={edges.top} className="hidden md:block" />
             <div className="flex flex-col gap-8 p-5">
               <Section label="Variant">
-                <Choice value={look.variant} onChange={(v) => set({ variant: v as Variant })} className="grid-cols-2">
+                <Choice value={look.variant} onChange={(v) => set({ variant: v as Variant })} className="grid-cols-3">
                   {VARIANTS.map((v) => (
                     <Tile key={v.value} value={v.value} label={v.name} showLabel tall>
                       {(still) => <Thumb look={{ ...look, variant: v.value }} still={still} large />}
@@ -380,5 +382,9 @@ function Thumb({ look, still, large }: { look: Look; still: boolean; large?: boo
     still,
   };
   const size = large ? "size-14" : "size-10";
-  return look.variant === "squircle" ? <Squircle {...shared} className={size} /> : <Mascot {...shared} className={size} />;
+  return look.variant === "dot" ? (
+    <Mascot {...shared} className={size} />
+  ) : (
+    <Squircle {...shared} shape={look.variant} className={size} />
+  );
 }

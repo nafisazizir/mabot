@@ -6,11 +6,11 @@ import { GLYPHS, type Glyph } from "./glyphs";
 import { svg } from "./shape";
 import { REST_POSE, sphereEyes, type Pose } from "./skins";
 import { squircleFrame } from "./squircle-geometry";
-import { SQUIRCLE } from "./squircles";
-import { VIEW } from "./squircle";
+import { SHAPES } from "./squircles";
+import { viewOf } from "./squircle";
 
 export type Still = {
-  variant: "squircle" | "dot";
+  variant: "squircle" | "mini" | "dot";
   color: string;
   ink: string;
   eyes: Eyes;
@@ -66,15 +66,16 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
   const [eyeX, eyeY] = gazeEyes(yaw, pitch);
   const pose: Pose = { ...REST_POSE, yaw, pitch, tilt: headTilt(yaw, pitch), eyeX, eyeY };
 
-  if (variant === "squircle") {
-    const frame = squircleFrame(pose, SQUIRCLE);
+  if (variant !== "dot") {
+    const shape = SHAPES[variant];
+    const frame = squircleFrame(pose, shape);
     // Turned, it can reach past its box, so fit the box to the silhouette.
     const extent = Math.max(...(frame.d.match(/-?\d+(\.\d+)?/g) ?? []).map((n) => Math.abs(+n)));
     const eyeGroups = frame.eyes
       .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke)}</g>` : ""))
       .join("");
     return {
-      half: Math.max(VIEW / 2, extent * 1.06),
+      half: Math.max(viewOf(shape) / 2, extent * 1.06),
       art:
         `<defs><clipPath id="body"><path d="${frame.d}"/></clipPath></defs>` +
         `<path d="${frame.d}" fill="${fill}"/><g clip-path="url(#body)">${eyeGroups}</g>`,

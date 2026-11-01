@@ -2,12 +2,12 @@
 
 import { useId, useRef, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
-import { halfWidth, squircleFrame, squircleSkin } from "./squircle-geometry";
+import { halfWidth, squircleFrame, squircleSkin, type SquircleVariant } from "./squircle-geometry";
 import type { Eyes } from "./controller";
 import { GlyphPath } from "./glyphs";
 import { svg } from "./shape";
 import { REST_POSE } from "./skins";
-import { SQUIRCLE } from "./squircles";
+import { SHAPES, type Shape } from "./squircles";
 import { useMascot, type MascotBehavior } from "./use-mascot";
 
 /**
@@ -18,10 +18,12 @@ import { useMascot, type MascotBehavior } from "./use-mascot";
  */
 const OPTICAL_SCALE = 0.92;
 
-/** The box's width in squircle units. It turns and spins past its edges, so the SVG overflows. */
-export const VIEW = (2 * halfWidth(SQUIRCLE)) / OPTICAL_SCALE;
+/** The box's width in a shape's units. It turns and spins past its edges, so the SVG overflows. */
+export const viewOf = (variant: SquircleVariant) => (2 * halfWidth(variant)) / OPTICAL_SCALE;
 
 type SquircleProps = MascotBehavior & {
+  /** Which of the family; defaults to the squircle. */
+  shape?: Shape;
   color: string;
   ink: string;
   eyes: Eyes;
@@ -33,7 +35,13 @@ type SquircleProps = MascotBehavior & {
 };
 
 /** The squircle mascot: a flat-coloured solid in 3D on the same physics as the dot. */
-export function Squircle({
+export function Squircle(props: SquircleProps) {
+  // The skin is built once per mount, so a new shape is a new mascot.
+  return <SquircleBody key={props.shape ?? "squircle"} {...props} />;
+}
+
+function SquircleBody({
+  shape = "squircle",
   color,
   ink,
   eyes,
@@ -46,18 +54,20 @@ export function Squircle({
   const bodyPathRef = useRef<SVGPathElement>(null);
   const leftEyeRef = useRef<SVGGElement>(null);
   const rightEyeRef = useRef<SVGGElement>(null);
+  const variant = SHAPES[shape];
+  const view = viewOf(variant);
   const { buttonRef, bodyRef, face, handlers } = useMascot(
     () =>
       squircleSkin(
         { body: bodyPathRef.current!, eyes: [leftEyeRef.current!, rightEyeRef.current!] },
-        VIEW,
-        () => SQUIRCLE,
+        view,
+        () => variant,
       ),
     eyes,
     behavior,
   );
   // Server render and first paint, before the animation loop takes over.
-  const first = squircleFrame(REST_POSE, SQUIRCLE);
+  const first = squircleFrame(REST_POSE, variant);
   // Eyes that slide to the edge are clipped by the silhouette, like the dot's.
   const id = useId().replace(/[^\w-]/g, "");
 
@@ -74,7 +84,7 @@ export function Squircle({
     >
       <span ref={bodyRef} className="absolute inset-0 block will-change-transform">
         <svg
-          viewBox={svg`${-VIEW / 2} ${-VIEW / 2} ${VIEW} ${VIEW}`}
+          viewBox={svg`${-view / 2} ${-view / 2} ${view} ${view}`}
           aria-hidden
           className="size-full overflow-visible"
           style={{ color: ink }}
