@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type CSSProperties, type Ref } from "react";
+import { useId, useRef, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
 import { halfWidth, squircleFrame, squircleSkin } from "./squircle-geometry";
 import type { Eyes } from "./controller";
@@ -58,6 +58,8 @@ export function Squircle({
   );
   // Server render and first paint, before the animation loop takes over.
   const first = squircleFrame(REST_POSE, SQUIRCLE);
+  // Eyes that slide to the edge are clipped by the silhouette, like the dot's.
+  const id = useId().replace(/[^\w-]/g, "");
 
   const Root = interactive ? "button" : "span";
   return (
@@ -77,12 +79,19 @@ export function Squircle({
           className="size-full overflow-visible"
           style={{ color: ink }}
         >
-          <path ref={bodyPathRef} d={first.d} style={{ fill: color }} />
-          <g ref={leftEyeRef} transform={first.eyes[0] ?? undefined}>
-            <GlyphPath glyph={face[0]} />
-          </g>
-          <g ref={rightEyeRef} transform={first.eyes[1] ?? undefined}>
-            <GlyphPath glyph={face[1]} />
+          <defs>
+            <clipPath id={`${id}-clip`}>
+              <use href={`#${id}-body`} />
+            </clipPath>
+          </defs>
+          <path id={`${id}-body`} ref={bodyPathRef} d={first.d} style={{ fill: color }} />
+          <g clipPath={`url(#${id}-clip)`}>
+            <g ref={leftEyeRef} transform={first.eyes[0] ?? undefined}>
+              <GlyphPath glyph={face[0]} />
+            </g>
+            <g ref={rightEyeRef} transform={first.eyes[1] ?? undefined}>
+              <GlyphPath glyph={face[1]} />
+            </g>
           </g>
         </svg>
       </span>

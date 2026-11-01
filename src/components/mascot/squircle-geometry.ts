@@ -136,6 +136,12 @@ export type SquircleFrame = {
 const DEG = 180 / Math.PI;
 /** How much of the pose's look turns the body. Stiffer than a head. */
 const LOOK = { yaw: 0.65, pitch: 0.55 };
+/**
+ * How far the eyes travel across the face, as fractions of its half extents.
+ * The body turns stiffly, so the eyes do most of the looking. At full travel
+ * the outer eye just reaches the rounded edge, where the silhouette clips it.
+ */
+const EYE_TRAVEL = { x: 0.3, y: 0.38 };
 
 /** Everything to draw for a pose. Pure, so it serves the first paint and still thumbnails too. */
 export function squircleFrame(pose: Pose, variant: SquircleVariant): SquircleFrame {
@@ -154,12 +160,12 @@ export function squircleFrame(pose: Pose, variant: SquircleVariant): SquircleFra
   );
   const facing = turn([0, 0, 1], t)[2];
 
-  // Eyes, only while the face is turned toward us. They glance a little
-  // across the face toward where the head is looking.
+  // Eyes, only while the face is turned toward us. They slide across the
+  // face on their own, ahead of the head.
   const eyes: [string | null, string | null] = [null, null];
   if (facing > 0.08) {
     const { u, v, gap, size } = variant.eyes;
-    const glance: Point = [pose.yaw * 0.12 * a, -pose.pitch * 0.12 * b];
+    const glance: Point = [pose.eyeX * EYE_TRAVEL.x * a, pose.eyeY * EYE_TRAVEL.y * b];
     // A point on the face from its own units, exact under the turn.
     const at = ([pu, pv]: Point) => {
       const s = (pu / a + 1) / 2;
@@ -175,8 +181,9 @@ export function squircleFrame(pose: Pose, variant: SquircleVariant): SquircleFra
       const [ux, uy] = at([p[0] + e, p[1]]);
       const [vx, vy] = at([p[0], p[1] + e]);
       // Upright: the eyes ride the face and narrow as it turns, but never skew.
-      const sx = (size * Math.hypot(ux - x, uy - y)) / e;
-      const sy = (size * Math.hypot(vx - x, vy - y) * pose.lid) / e;
+      const k = size * pose.eyeScale;
+      const sx = (k * Math.hypot(ux - x, uy - y)) / e;
+      const sy = (k * Math.hypot(vx - x, vy - y) * pose.lid) / e;
       eyes[i] = svg`translate(${x} ${y}) rotate(${pose.eyeRot * DEG}) scale(${sx} ${sy}) translate(-12 -12)`;
     });
   }

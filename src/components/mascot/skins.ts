@@ -16,6 +16,15 @@ export type Pose = {
   tilt: number;
   /** Per-eye rotation (the working mood's rocking plus signs). */
   eyeRot: number;
+  /**
+   * Where the eyes sit on the face, apart from the head: -1 to 1 across the
+   * travel a skin allows, x right, y down. They lead the head, dart in
+   * saccades, trail the body and act out moods.
+   */
+  eyeX: number;
+  eyeY: number;
+  /** Eye size: wider when surprised or pleading, smaller when startled. */
+  eyeScale: number;
 };
 
 export interface Skin {
@@ -81,4 +90,7 @@ export const REST_POSE: Pose = {
   lid: 1,
   tilt: 0,
   eyeRot: 0,
+  eyeX: 0,
+  eyeY: 0,
+  eyeScale: 1,
 };

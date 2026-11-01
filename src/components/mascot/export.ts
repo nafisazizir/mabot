@@ -1,7 +1,7 @@
 // Still images of a mascot, drawn from the same geometry as the live one but
 // at rest: eyes open, no bob, facing its pose.
 
-import { headTilt, moodFace, type Eyes, type Gaze, type Mood } from "./controller";
+import { gazeEyes, headTilt, moodFace, type Eyes, type Gaze, type Mood } from "./controller";
 import { GLYPHS, type Glyph } from "./glyphs";
 import { svg } from "./shape";
 import { REST_POSE, sphereEyes, type Pose } from "./skins";
@@ -63,7 +63,8 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
   const face = moodFace(mood, 0) ?? eyes;
   const yaw = gaze?.yaw ?? 0;
   const pitch = gaze?.pitch ?? 0;
-  const pose: Pose = { ...REST_POSE, yaw, pitch, tilt: headTilt(yaw, pitch) };
+  const [eyeX, eyeY] = gazeEyes(yaw, pitch);
+  const pose: Pose = { ...REST_POSE, yaw, pitch, tilt: headTilt(yaw, pitch), eyeX, eyeY };
 
   if (variant === "squircle") {
     const frame = squircleFrame(pose, SQUIRCLE);
@@ -74,7 +75,9 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
       .join("");
     return {
       half: Math.max(VIEW / 2, extent * 1.06),
-      art: `<path d="${frame.d}" fill="${fill}"/>${eyeGroups}`,
+      art:
+        `<defs><clipPath id="body"><path d="${frame.d}"/></clipPath></defs>` +
+        `<path d="${frame.d}" fill="${fill}"/><g clip-path="url(#body)">${eyeGroups}</g>`,
     };
   }
 

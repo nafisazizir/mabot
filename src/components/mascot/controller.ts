@@ -59,6 +59,29 @@ export function moodFace(mood: Mood, now: number): Eyes | null {
   }
 }
 
+/**
+ * Where the eyes rest on the face for a head direction, from -1 to 1. They
+ * lead the head, so they reach the edge of their travel before it turns all
+ * the way.
+ */
+export const gazeEyes = (yaw: number, pitch: number): [number, number] => [
+  clamp(yaw / MAX_YAW, -1, 1),
+  clamp(-pitch / MAX_PITCH, -1, 1),
+];
+
+/** What the head and eyes are aiming for this frame. */
+type Look = {
+  yaw: number;
+  pitch: number;
+  verge: number;
+  /** Eye position on the face; defaults to `gazeEyes` of the head. */
+  eyes?: [number, number];
+  /** Eye size. */
+  open?: number;
+  /** How far idle saccades dart, as a fraction of the eyes' travel. */
+  jitter?: number;
+};
+
 /** A slight head tilt when looking off-axis. */
 export const headTilt = (yaw: number, pitch: number) => clamp(-yaw * pitch * 0.5, -0.3, 0.3);
 
@@ -82,6 +105,17 @@ export class MascotController {
   private squash = spring(1);
   private ox = spring();
   private oy = spring();
+  private eyeX = spring();
+  private eyeY = spring();
+  private eyeOpen = spring(1);
+
+  // The eyes move first and the head follows: a sudden change of target holds
+  // the head on its old aim for a beat.
+  private aim = { yaw: 0, pitch: 0 };
+  private lastLook = { yaw: 0, pitch: 0 };
+  private headHoldUntil = 0;
+  private saccade: [number, number] = [0, 0];
+  private nextSaccade = 0;
 
   private hover = false;
   private pressed = false;
@@ -123,6 +157,8 @@ export class MascotController {
     // Start already facing the pose rather than swinging into it.
     this.yaw.x = options.gaze?.yaw ?? 0;
     this.pitch.x = options.gaze?.pitch ?? 0;
+    this.aim = this.lastLook = { yaw: this.yaw.x, pitch: this.pitch.x };
+    [this.eyeX.x, this.eyeY.x] = gazeEyes(this.yaw.x, this.pitch.x);
     this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     // The button itself never moves (all motion is on inner layers), so its
@@ -259,29 +295,37 @@ export class MascotController {
     this.squash.v += 3;
   }
 
-  private lookTarget(now: number, cx: number, cy: number, R: number) {
+  private lookTarget(now: number, cx: number, cy: number, R: number): Look {
     if (this.dragging) {
       // Look where it's being dragged.
       return {
         yaw: clamp(this.ox.v * 0.0016, -MAX_YAW, MAX_YAW),
         pitch: clamp(-this.oy.v * 0.0016, -MAX_PITCH, MAX_PITCH),
         verge: 0,
+        open: 1.08,
+        jitter: 0,
       };
     }
 
     const gaze = this.options.gaze;
-    if (this.options.still) return { yaw: gaze?.yaw ?? 0, pitch: gaze?.pitch ?? 0, verge: 0 };
+    if (this.options.still) return { yaw: gaze?.yaw ?? 0, pitch: gaze?.pitch ?? 0, verge: 0, jitter: 0 };
 
     // Busy moods look at their own work rather than the cursor.
     switch (this.mood) {
       case "thinking": {
+        // Eyes up in the corner, searching a little, while the head swaps sides.
         const left = now % 1600 < 800;
-        return { yaw: left ? -0.4 : 0.4, pitch: 0.3, verge: 0 };
+        return { yaw: left ? -0.4 : 0.4, pitch: 0.3, verge: 0, eyes: [left ? -0.85 : 0.85, -0.9], jitter: 0.12 };
       }
-      case "working":
-        return { yaw: Math.sin(now / 650) * 0.3, pitch: -0.2, verge: 0.06 };
+      case "working": {
+        // Reading: four fixations along a line, then a sweep back to the start.
+        // The head drifts after the eyes.
+        const t = (now % 1500) / 1500;
+        const x = -0.7 + 1.4 * (t < 0.8 ? Math.floor((t / 0.8) * 4) / 3 : 0);
+        return { yaw: x * 0.3, pitch: -0.2, verge: 0.06, eyes: [x, 0.6], jitter: 0 };
+      }
       case "paused":
-        return { yaw: 0, pitch: -0.25, verge: 0 };
+        return { yaw: 0, pitch: -0.25, verge: 0, eyes: [0, 0.75], open: 0.94, jitter: 0 };
     }
 
     const idle = !pointer.inside || now - pointer.lastMove > IDLE_AFTER_MS;
@@ -291,10 +335,18 @@ export class MascotController {
       const depth = R * 2 + 160;
       // Cross the eyes a little as the cursor gets close.
       const near = 1 - clamp((Math.hypot(dx, dy) - R * 0.5) / (R * 1.6), 0, 1);
+      const yaw = Math.atan2(dx, depth);
+      const pitch = Math.atan2(-dy, depth);
       return {
-        yaw: clamp(Math.atan2(dx, depth), -MAX_YAW, MAX_YAW),
-        pitch: clamp(Math.atan2(-dy, depth), -MAX_PITCH, MAX_PITCH),
+        yaw: clamp(yaw, -MAX_YAW, MAX_YAW),
+        pitch: clamp(pitch, -MAX_PITCH, MAX_PITCH),
         verge: MAX_VERGE * near * near,
+        // The eyes are faster than the head and reach a bit further.
+        eyes: [clamp((yaw * 1.25) / MAX_YAW, -1, 1), clamp((-pitch * 1.25) / MAX_PITCH, -1, 1)],
+        // Wide-eyed as the cursor closes in.
+        open: 1 + 0.14 * near * near,
+        // Smooth pursuit while the cursor moves; little darts once it stops.
+        jitter: now - pointer.lastMove < 500 ? 0 : 0.08,
       };
     }
 
@@ -319,8 +371,13 @@ export class MascotController {
     const calm = this.reduced.matches || still;
 
     const look = this.lookTarget(now, cx, cy, R);
-    step(this.yaw, look.yaw, 140, 17, dt);
-    step(this.pitch, look.pitch, 140, 17, dt);
+    // A jump in where to look moves the eyes at once and the head a beat later.
+    const jump = Math.abs(look.yaw - this.lastLook.yaw) + Math.abs(look.pitch - this.lastLook.pitch);
+    if (jump > 0.2 && !this.dragging && !calm) this.headHoldUntil = now + 140;
+    this.lastLook = { yaw: look.yaw, pitch: look.pitch };
+    if (now >= this.headHoldUntil) this.aim = this.lastLook;
+    step(this.yaw, this.aim.yaw, 140, 17, dt);
+    step(this.pitch, this.aim.pitch, 140, 17, dt);
     step(this.verge, look.verge, 120, 18, dt);
     step(this.spin, this.spinTarget, 36, 7.5, dt);
     if (
@@ -364,6 +421,44 @@ export class MascotController {
       if (t > 3.2) this.moodStart = now;
       shake = Math.sin(t * 28) * 0.4 * Math.exp(-t * 3.5);
     }
+
+    // Eyes: aimed with the look, darting in saccades, acting out the mood and
+    // trailing the body when it moves.
+    let [ex, ey] = look.eyes ?? gazeEyes(look.yaw, look.pitch);
+    let open = look.open ?? 1;
+    const jitter = calm ? 0 : (look.jitter ?? 0.16);
+    if (jitter && now > this.nextSaccade) {
+      const home = Math.random() < 0.35;
+      this.saccade = home ? [0, 0] : [Math.random() * 2 - 1, (Math.random() * 2 - 1) * 0.7];
+      this.nextSaccade = now + 300 + Math.random() * 1400;
+    }
+    ex += this.saccade[0] * jitter;
+    ey += this.saccade[1] * jitter;
+    if (mood === "waiting") {
+      // Looking up at you, big-eyed.
+      ey -= 0.2;
+      open *= 1.12 + (calm ? 0 : Math.sin(now / 260) * 0.03);
+    } else if (mood === "done") {
+      ey -= 0.3;
+    } else if (mood === "error" && !calm) {
+      // Startled small, eyes darting ahead of the head shake.
+      ex += shake * 1.6;
+      open *= 1 - 0.14 * Math.exp(-((now - this.moodStart) / 1000) * 2.5);
+    }
+    if (!calm) {
+      const lag = 1 / (R * 20 || 1);
+      ex -= clamp(this.ox.v * lag, -0.5, 0.5) + clamp(this.spin.v * 0.05, -0.5, 0.5);
+      ey -= clamp(this.oy.v * lag, -0.5, 0.5);
+    }
+    open *= this.pressed && !this.dragging ? 0.9 : this.hover ? 1.05 : 1;
+    ex = clamp(ex, -1.2, 1.2);
+    ey = clamp(ey, -1.2, 1.2);
+    // Stiff enough to read as a saccade; substepped so it's stable at low frame rates.
+    for (let i = 0; i < 3; i++) {
+      step(this.eyeX, ex, 1100, 62, dt / 3);
+      step(this.eyeY, ey, 1100, 62, dt / 3);
+    }
+    step(this.eyeOpen, open, 320, 16, dt);
 
     // Blinks: mostly single, sometimes a quick double. Paused eyes are already shut.
     if (mood !== "paused" && !still && this.blinkStart < 0 && now > this.nextBlink) {
@@ -409,6 +504,10 @@ export class MascotController {
         lid,
         tilt: headTilt(this.yaw.x, this.pitch.x),
         eyeRot: this.eyeRot.x,
+        eyeX: this.eyeX.x,
+        // Eyes dip a little as they close.
+        eyeY: this.eyeY.x + (1 - lid) * 0.12,
+        eyeScale: this.eyeOpen.x,
       },
       R,
     );
@@ -422,6 +521,9 @@ export class MascotController {
       settled(this.verge, look.verge) &&
       settled(this.spin, this.spinTarget) &&
       settled(this.eyeRot, 0) &&
+      settled(this.eyeX, ex) &&
+      settled(this.eyeY, ey) &&
+      settled(this.eyeOpen, open) &&
       settled(this.ox, 0) &&
       settled(this.oy, 0) &&
       settled(this.grow, 1) &&
