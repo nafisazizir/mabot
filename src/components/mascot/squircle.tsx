@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
 import { halfWidth, squircleFrame, squircleSkin, tunedBody, type SquircleVariant } from "./squircle-geometry";
 import { posed, type Eyes } from "./controller";
-import { GlyphPath } from "./glyphs";
+import { faceTuning, GlyphPath } from "./glyphs";
 import { svg } from "./shape";
 import { SHAPES, type Shape } from "./squircles";
 import { DEFAULT_TUNING, type Tuning } from "./tuning";
@@ -61,9 +61,6 @@ function SquircleBody({
   const view = viewOf(variant);
   // The animation loop reads the latest tuning from here, so sliders apply live.
   const live = useRef({ variant, view, tuning });
-  useEffect(() => {
-    live.current = { variant, view, tuning };
-  });
   const { buttonRef, bodyRef, face, handlers } = useMascot(
     () =>
       squircleSkin(
@@ -74,8 +71,13 @@ function SquircleBody({
     behavior,
     tuning,
   );
+  // Spaced for the eyes on show, so a face change re-spaces them behind its blink.
+  const worn = faceTuning(face, tuning);
+  useEffect(() => {
+    live.current = { variant, view, tuning: worn };
+  });
   // Server render and first paint, before the animation loop takes over.
-  const first = squircleFrame(posed(behavior.gaze), variant, tuning);
+  const first = squircleFrame(posed(behavior.gaze), variant, worn);
   // Eyes that slide to the edge are clipped by the silhouette, like the dot's.
   const id = useId().replace(/[^\w-]/g, "");
 

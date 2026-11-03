@@ -52,7 +52,7 @@ const ITERATIONS: Iteration[] = [
     id: "bars",
     name: "Bars",
     note: "Square-ended blocks, like Vercel's and ElevenLabs' II",
-    tuning: { ...DEFAULT_TUNING, gap: 0.55 },
+    tuning: DEFAULT_TUNING,
     eyes: BARS,
   },
   {

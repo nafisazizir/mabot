@@ -2,7 +2,7 @@
 // at rest: eyes open, no bob, facing its pose.
 
 import { moodFace, posed, type Eyes, type Gaze, type Mood } from "./controller";
-import { glyphStyle, type Glyph, type Weight } from "./glyphs";
+import { faceTuning, glyphStyle, type Glyph, type Weight } from "./glyphs";
 import { svg } from "./shape";
 import { sphereEyes } from "./skins";
 import { squircleFrame, tunedBody } from "./squircle-geometry";
@@ -68,7 +68,7 @@ function draw({ variant, color, ink, eyes, mood, gaze, tuning = DEFAULT_TUNING }
 
   if (variant !== "dot") {
     const shape = tunedBody(SHAPES[variant], tuning);
-    const frame = squircleFrame(pose, shape, tuning);
+    const frame = squircleFrame(pose, shape, faceTuning(face, tuning));
     // Turned, it can reach past its box, so fit the box to the silhouette.
     const extent = Math.max(...(frame.d.match(/-?\d+(\.\d+)?/g) ?? []).map((n) => Math.abs(+n)));
     const eyeGroups = frame.eyes

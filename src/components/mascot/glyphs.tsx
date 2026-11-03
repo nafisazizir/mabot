@@ -24,14 +24,15 @@ export const GLYPHS = {
   "|": { d: "M12 5v14" },
   I: { d: "M12 7.25v9.5", pill: true },
   // 5 × 15: 3:1, between Vercel's chunky bars and ElevenLabs' taller ones.
-  "▮": { d: "M9.5 4.5h5v15h-5Z", fill: true },
+  // Narrow, so they sit closer: centres about 3.2 bar widths apart, as Vercel's do.
+  "▮": { d: "M9.5 4.5h5v15h-5Z", fill: true, gap: 0.75 },
   "@": { d: "M10 13a2 2 0 0 1 4 0a4 4 0 0 1-8 0a6 6 0 0 1 12 0" },
   "•": { d: "M12 8a4 4 0 1 1 0 8a4 4 0 1 1 0-8Z", fill: true },
   "♥": {
     d: "M12 19 4.9 12.1a4.1 4.1 0 0 1 7.1-4.6 4.1 4.1 0 0 1 7.1 4.6Z",
     fill: true,
   },
-} satisfies Record<string, { d: string; fill?: boolean; pill?: boolean }>;
+} satisfies Record<string, { d: string; fill?: boolean; pill?: boolean; gap?: number }>;
 
 export type Glyph = keyof typeof GLYPHS;
 
@@ -39,6 +40,16 @@ export const GLYPH_NAMES = Object.keys(GLYPHS) as Glyph[];
 
 /** The parts of a tuning that decide how heavy a glyph is drawn. */
 export type Weight = Pick<Tuning, "stroke" | "pill" | "round">;
+
+/**
+ * A tuning adjusted for the glyphs on show: narrow eyes like bars want a
+ * tighter gap than the tuning's, which suits glyphs as wide as `*` and `^`.
+ */
+export function faceTuning<T extends Pick<Tuning, "gap">>(face: readonly [Glyph, Glyph], tuning: T): T {
+  const gapOf = (g: Glyph) => (GLYPHS[g] as { gap?: number }).gap ?? 1;
+  const k = (gapOf(face[0]) + gapOf(face[1])) / 2;
+  return k === 1 ? tuning : { ...tuning, gap: tuning.gap * k };
+}
 
 /** How to paint a glyph: its path and, unless filled, its stroke. Shared by the live SVG and exports. */
 export function glyphStyle(glyph: Glyph, weight: Weight = DEFAULT_TUNING) {
