@@ -68,3 +68,29 @@ export const LEGACY_TUNING: Tuning = {
   depth: 0,
   turn: [0.65, 0.55],
 };
+
+/**
+ * Glyph line weight, in the glyph's 24-unit grid, for a mascot drawn `px`
+ * wide. Thin glyphs fade to hairlines in small avatars, so the weight grows
+ * as the mascot shrinks, like a typeface's optical sizes: as tuned from 64 px
+ * up, 3.6 at 32 and 4.6 at 20 and below.
+ */
+export function opticalStroke(px: number, base = DEFAULT_TUNING.stroke) {
+  const stops: [number, number][] = [
+    [20, 4.6],
+    [24, 4.1],
+    [32, 3.6],
+    [48, 3.1],
+    [64, 2.75],
+  ];
+  const k = (w: number) => (w / 2.75) * base;
+  if (px <= stops[0][0]) return k(stops[0][1]);
+  for (let i = 1; i < stops.length; i++) {
+    const [x1, y1] = stops[i];
+    if (px <= x1) {
+      const [x0, y0] = stops[i - 1];
+      return k(y0 + ((y1 - y0) * (px - x0)) / (x1 - x0));
+    }
+  }
+  return base;
+}

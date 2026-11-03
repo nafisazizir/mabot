@@ -8,7 +8,7 @@ import { sphereEyes } from "./skins";
 import { squircleFrame } from "./squircle-geometry";
 import { SHAPES } from "./squircles";
 import { viewOf } from "./squircle";
-import { DEFAULT_TUNING, LEGACY_TUNING } from "./tuning";
+import { DEFAULT_TUNING, LEGACY_TUNING, opticalStroke } from "./tuning";
 
 export type Still = {
   variant: "squircle" | "mini" | "dot";
@@ -49,15 +49,37 @@ function glyph(name: Glyph, ink: string, weight: Weight) {
 
 /** How the still sits in its file. */
 export type Framing = {
-  /** Space added round the mascot, as a fraction of its own box. */
-  padding?: number;
+  /**
+   * Space added round the mascot, as a fraction of its own box, or "circle"
+   * to fit it inside the circle a round profile picture is cropped to.
+   */
+  padding?: number | "circle";
   /** A fill behind it; transparent when omitted. */
   background?: string;
-  /** Pixel width and height written onto the SVG. */
+  /** Pixel width and height written onto the SVG; also sets the eyes' line weight. */
   size?: number;
 };
 
-/** The mascot's drawing, centred on the origin, with the half width of the square that holds it. */
+/**
+ * In a circle crop, the mascot's farthest point sits at this fraction of the
+ * circle's radius: clear of the edge even tipped in its profile pose, and
+ * about 70% of the circle wide.
+ */
+const CIRCLE_FILL = 0.86;
+
+/** Farthest any point of an SVG path's outline is from the origin. */
+const reach = (d: string) => {
+  const n = (d.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+  let r = 0;
+  for (let i = 0; i + 1 < n.length; i += 2) r = Math.max(r, Math.hypot(n[i], n[i + 1]));
+  return r;
+};
+
+/**
+ * The mascot's drawing, centred on the origin: its own box's width, the half
+ * width of a square that holds it, how far it reaches from the centre, and a
+ * painter for the art at a given eye weight.
+ */
 function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
   const fill = resolve(color);
   const stroke = resolve(ink);
@@ -69,14 +91,20 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
     const frame = squircleFrame(pose, shape, faceTuning(face, DEFAULT_TUNING));
     // Turned, it can reach past its box, so fit the box to the silhouette.
     const extent = Math.max(...(frame.d.match(/-?\d+(\.\d+)?/g) ?? []).map((n) => Math.abs(+n)));
-    const eyeGroups = frame.eyes
-      .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke, DEFAULT_TUNING)}</g>` : ""))
-      .join("");
     return {
+      box: viewOf(shape),
       half: Math.max(viewOf(shape) / 2, extent * 1.06),
-      art:
-        `<defs><clipPath id="body"><path d="${frame.d}"/></clipPath></defs>` +
-        `<path d="${frame.d}" fill="${fill}"/><g clip-path="url(#body)">${eyeGroups}</g>`,
+      radius: reach(frame.d),
+      art: (px: number) => {
+        const weight = { ...DEFAULT_TUNING, stroke: opticalStroke(px) };
+        const eyeGroups = frame.eyes
+          .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke, weight)}</g>` : ""))
+          .join("");
+        return (
+          `<defs><clipPath id="body"><path d="${frame.d}"/></clipPath></defs>` +
+          `<path d="${frame.d}" fill="${fill}"/><g clip-path="url(#body)">${eyeGroups}</g>`
+        );
+      },
     };
   }
 
@@ -90,8 +118,11 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
     )
     .join("");
   return {
+    box: 2 * R,
     half: R,
-    art:
+    radius: R,
+    // The dot keeps its DevDay weight at every size.
+    art: () =>
       `<defs><clipPath id="head"><circle r="${R}"/></clipPath></defs>` +
       `<circle r="${R}" fill="${fill}"/>` +
       `<g clip-path="url(#head)" transform="${svg`rotate(${(pose.tilt * 180) / Math.PI})`}">${eyeGroups}</g>`,
@@ -99,14 +130,17 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
 }
 
 export function mascotSvg(still: Still, { padding = 0, background, size }: Framing = {}) {
-  const { half, art } = draw(still);
-  const h = half * (1 + padding);
-  const box = svg`${-h} ${-h} ${2 * h} ${2 * h}`;
+  const { box, half, radius, art } = draw(still);
+  const h = padding === "circle" ? radius / CIRCLE_FILL : half * (1 + padding);
+  // The mascot as drawn in px, which sets its eyes' weight. A bare SVG scales
+  // anywhere, so it keeps the weight tuned for large sizes.
+  const px = size ? (size * box) / (2 * h) : Infinity;
+  const viewBox = svg`${-h} ${-h} ${2 * h} ${2 * h}`;
   const dims = size ? ` width="${size}" height="${size}"` : "";
   const bg = background
     ? `<rect ${svg`x="${-h}" y="${-h}" width="${2 * h}" height="${2 * h}"`} fill="${resolve(background)}"/>`
     : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box}"${dims}>${bg}${art}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"${dims}>${bg}${art(px)}</svg>`;
 }
 
 /** An SVG string rasterised to a square PNG, `size` px a side. */

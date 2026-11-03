@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useId, useRef, type CSSProperties, type Ref } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
 import { halfWidth, squircleFrame, squircleSkin, type SquircleVariant } from "./squircle-geometry";
 import { posed, type Eyes } from "./controller";
 import { faceTuning, GlyphPath } from "./glyphs";
 import { svg } from "./shape";
 import { SHAPES, type Shape } from "./squircles";
-import { DEFAULT_TUNING } from "./tuning";
+import { DEFAULT_TUNING, opticalStroke } from "./tuning";
 import { useMascot, type MascotBehavior } from "./use-mascot";
 
 /**
@@ -67,8 +67,18 @@ function SquircleBody({
     eyes,
     behavior,
   );
+  // Drawn width in px, for the line weight. Unknown on the server, where it
+  // draws at the tuned weight.
+  const [px, setPx] = useState<number | null>(null);
+  useEffect(() => {
+    const el = buttonRef.current!;
+    const observer = new ResizeObserver(([entry]) => setPx(Math.round(entry.contentRect.width)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [buttonRef]);
+  const weight = { ...DEFAULT_TUNING, stroke: px === null ? DEFAULT_TUNING.stroke : opticalStroke(px) };
   // Spaced for the eyes on show, so a face change re-spaces them behind its blink.
-  const worn = faceTuning(face, DEFAULT_TUNING);
+  const worn = faceTuning(face, weight);
   useEffect(() => {
     live.current = { variant, view, tuning: worn };
   });
@@ -103,10 +113,10 @@ function SquircleBody({
           <path id={`${id}-body`} ref={bodyPathRef} d={first.d} style={{ fill: color }} />
           <g clipPath={`url(#${id}-clip)`}>
             <g ref={leftEyeRef} transform={first.eyes[0] ?? undefined}>
-              <GlyphPath glyph={face[0]} weight={DEFAULT_TUNING} />
+              <GlyphPath glyph={face[0]} weight={weight} />
             </g>
             <g ref={rightEyeRef} transform={first.eyes[1] ?? undefined}>
-              <GlyphPath glyph={face[1]} weight={DEFAULT_TUNING} />
+              <GlyphPath glyph={face[1]} weight={weight} />
             </g>
           </g>
         </svg>
