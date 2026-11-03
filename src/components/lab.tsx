@@ -18,6 +18,7 @@ type Iteration = { id: string; name: string; note: string; tuning: Tuning; eyes?
 
 const SPARKLE: Eyes = ["*", "*"];
 const PILL: Eyes = ["I", "I"];
+const BARS: Eyes = ["▮", "▮"];
 
 const ITERATIONS: Iteration[] = [
   { id: "before", name: "Before", note: "Wide-set, centred, thin, always upright", tuning: LEGACY_TUNING },
@@ -48,6 +49,13 @@ const ITERATIONS: Iteration[] = [
     eyes: PILL,
   },
   {
+    id: "bars",
+    name: "Bars",
+    note: "Square-ended blocks, like Vercel's and ElevenLabs' II",
+    tuning: { ...DEFAULT_TUNING, gap: 0.55 },
+    eyes: BARS,
+  },
+  {
     id: "soft",
     name: "Soft body",
     note: "Rounder corners and a deeper body, nearer Tradbot",
@@ -62,7 +70,7 @@ const POSES: { id: string; name: string; gaze?: Gaze }[] = [
   { id: "wander", name: "Wander" },
 ];
 
-const EXPRESSIONS = ["Own", "Sparkle", "Pill", "Happy", "Curious", "Content", "Squeeze", "Shocked"];
+const EXPRESSIONS = ["Own", "Sparkle", "Pill", "Bars", "Happy", "Curious", "Content", "Squeeze", "Shocked"];
 
 /** Mono black/white follows the theme; the rest are the ziiz ramps. */
 const AUTO = { name: "Auto", color: "var(--mascot-auto)", ink: "var(--mascot-auto-ink)" };

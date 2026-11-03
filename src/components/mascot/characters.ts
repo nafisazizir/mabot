@@ -25,6 +25,7 @@ export const PRESETS: { name: string; eyes: Eyes }[] = [
   { name: "Sleepy", eyes: ["-", "-"] },
   { name: "Sparkle", eyes: ["*", "*"] },
   { name: "Pill", eyes: ["I", "I"] },
+  { name: "Bars", eyes: ["▮", "▮"] },
   { name: "Shocked", eyes: ["O", "O"] },
   { name: "Content", eyes: ["u", "u"] },
   { name: "Dizzy", eyes: ["@", "@"] },

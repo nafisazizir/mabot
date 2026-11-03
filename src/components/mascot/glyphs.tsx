@@ -1,6 +1,8 @@
 // Eye glyphs drawn on a 24×24 grid, centred on (12, 12). Stroked unless
 // `fill` is set, so they read like a medium-weight sans at any size. A `pill`
-// is one short stroke drawn fat with round ends, like the Grok bot eyes.
+// is one short stroke drawn fat with round ends, like the Grok bot eyes; a
+// bar is a solid, square-ended block, like the Vercel characters' eyes and
+// the ElevenLabs "II", and keeps its corners whatever the tuning.
 
 import { DEFAULT_TUNING, type Tuning } from "./tuning";
 
@@ -21,6 +23,8 @@ export const GLYPHS = {
   "\\": { d: "M8 5l8 14" },
   "|": { d: "M12 5v14" },
   I: { d: "M12 7.25v9.5", pill: true },
+  // 5 × 15: 3:1, between Vercel's chunky bars and ElevenLabs' taller ones.
+  "▮": { d: "M9.5 4.5h5v15h-5Z", fill: true },
   "@": { d: "M10 13a2 2 0 0 1 4 0a4 4 0 0 1-8 0a6 6 0 0 1 12 0" },
   "•": { d: "M12 8a4 4 0 1 1 0 8a4 4 0 1 1 0-8Z", fill: true },
   "♥": {
