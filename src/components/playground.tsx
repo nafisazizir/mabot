@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { IconDownload, IconEye, IconPointer, IconPointerFilled, IconRotate360 } from "@tabler/icons-react";
+import Link from "next/link";
+import { IconDownload, IconEye, IconFlask, IconPointer, IconPointerFilled, IconRotate360 } from "@tabler/icons-react";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FieldLegend, FieldSet } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
@@ -64,7 +65,7 @@ const cast = ({ palette, character, auto }: Look, dark = false): Character => {
 export function Playground() {
   const mascot = useRef<MascotHandle>(null);
   const [look, setLook] = useState<Look>({
-    variant: "squircle",
+    variant: "mini",
     palette: ZIIZ,
     character: contrasting(false),
     auto: true,
@@ -163,6 +164,10 @@ export function Playground() {
                 </Button>
               }
             />
+            <Link href="/lab" className={buttonVariants({ variant: "ghost", size: "sm", shape: "rounded" })}>
+              <IconFlask data-icon="inline-start" />
+              Lab
+            </Link>
           </div>
         </main>
 

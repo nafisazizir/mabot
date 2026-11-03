@@ -24,7 +24,7 @@ export const PRESETS: { name: string; eyes: Eyes }[] = [
   { name: "Squeeze", eyes: [">", "<"] },
   { name: "Sleepy", eyes: ["-", "-"] },
   { name: "Sparkle", eyes: ["*", "*"] },
-  { name: "Pill", eyes: ["|", "|"] },
+  { name: "Pill", eyes: ["I", "I"] },
   { name: "Shocked", eyes: ["O", "O"] },
   { name: "Content", eyes: ["u", "u"] },
   { name: "Dizzy", eyes: ["@", "@"] },
@@ -75,9 +75,17 @@ export const MOODS: { mood: Mood; name: string; hint: string }[] = [
   { mood: "error", name: "Error", hint: "x x and a head shake" },
 ];
 
+/**
+ * The profile picture: three-quarters, glancing up and to the right, tipped
+ * anticlockwise, like the Grok bot marks. About 17° of roll all told, with
+ * the tilt that comes from looking off-axis.
+ */
+export const PROFILE: Gaze = { yaw: 0.5, pitch: 0.35, roll: -0.2 };
+
 // Where the head rests when it isn't following the cursor. No gaze means it
-// looks around on its own.
+// looks around on its own. Hovered, it turns to face you either way.
 export const POSES: { name: string; gaze?: Gaze }[] = [
+  { name: "Profile", gaze: PROFILE },
   { name: "3/4 up", gaze: { yaw: 0.5, pitch: 0.35 } },
   { name: "Front", gaze: { yaw: 0, pitch: 0 } },
   { name: "3/4", gaze: { yaw: 0.5, pitch: 0 } },

@@ -1,13 +1,14 @@
 // Still images of a mascot, drawn from the same geometry as the live one but
 // at rest: eyes open, no bob, facing its pose.
 
-import { gazeEyes, headTilt, moodFace, type Eyes, type Gaze, type Mood } from "./controller";
-import { GLYPHS, type Glyph } from "./glyphs";
+import { moodFace, posed, type Eyes, type Gaze, type Mood } from "./controller";
+import { glyphStyle, type Glyph, type Weight } from "./glyphs";
 import { svg } from "./shape";
-import { REST_POSE, sphereEyes, type Pose } from "./skins";
-import { squircleFrame } from "./squircle-geometry";
+import { sphereEyes } from "./skins";
+import { squircleFrame, tunedBody } from "./squircle-geometry";
 import { SHAPES } from "./squircles";
 import { viewOf } from "./squircle";
+import { DEFAULT_TUNING, LEGACY_TUNING, type Tuning } from "./tuning";
 
 export type Still = {
   variant: "squircle" | "mini" | "dot";
@@ -16,6 +17,8 @@ export type Still = {
   eyes: Eyes;
   mood: Mood;
   gaze?: Gaze;
+  /** The squircle family's face; the dot keeps its DevDay glyphs. */
+  tuning?: Tuning;
 };
 
 /** The dot's radius in its viewBox. */
@@ -39,11 +42,11 @@ function resolve(color: string) {
   return `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
 }
 
-function glyph(name: Glyph, ink: string) {
-  const { d, fill } = GLYPHS[name] as { d: string; fill?: boolean };
-  return fill
-    ? `<path d="${d}" fill="${ink}"/>`
-    : `<path d="${d}" fill="none" stroke="${ink}" stroke-width="2.75" stroke-linejoin="miter" stroke-miterlimit="8"/>`;
+function glyph(name: Glyph, ink: string, weight: Weight) {
+  const s = glyphStyle(name, weight);
+  return s.fill
+    ? `<path d="${s.d}" fill="${ink}"/>`
+    : `<path d="${s.d}" fill="none" stroke="${ink}" stroke-width="${s.width}" stroke-linecap="${s.cap}" stroke-linejoin="${s.join}" stroke-miterlimit="8"/>`;
 }
 
 /** How the still sits in its file. */
@@ -57,22 +60,19 @@ export type Framing = {
 };
 
 /** The mascot's drawing, centred on the origin, with the half width of the square that holds it. */
-function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
+function draw({ variant, color, ink, eyes, mood, gaze, tuning = DEFAULT_TUNING }: Still) {
   const fill = resolve(color);
   const stroke = resolve(ink);
   const face = moodFace(mood, 0) ?? eyes;
-  const yaw = gaze?.yaw ?? 0;
-  const pitch = gaze?.pitch ?? 0;
-  const [eyeX, eyeY] = gazeEyes(yaw, pitch);
-  const pose: Pose = { ...REST_POSE, yaw, pitch, tilt: headTilt(yaw, pitch), eyeX, eyeY };
+  const pose = posed(gaze);
 
   if (variant !== "dot") {
-    const shape = SHAPES[variant];
-    const frame = squircleFrame(pose, shape);
+    const shape = tunedBody(SHAPES[variant], tuning);
+    const frame = squircleFrame(pose, shape, tuning);
     // Turned, it can reach past its box, so fit the box to the silhouette.
     const extent = Math.max(...(frame.d.match(/-?\d+(\.\d+)?/g) ?? []).map((n) => Math.abs(+n)));
     const eyeGroups = frame.eyes
-      .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke)}</g>` : ""))
+      .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke, tuning)}</g>` : ""))
       .join("");
     return {
       half: Math.max(viewOf(shape) / 2, extent * 1.06),
@@ -87,7 +87,7 @@ function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
   const eyeGroups = sphereEyes(pose, R)
     .map((p, i) =>
       p
-        ? `<g transform="${svg`translate(${p.x} ${p.y}) scale(${p.sx * k} ${p.sy * k}) translate(-12 -12)`}">${glyph(face[i], stroke)}</g>`
+        ? `<g transform="${svg`translate(${p.x} ${p.y}) scale(${p.sx * k} ${p.sy * k}) translate(-12 -12)`}">${glyph(face[i], stroke, LEGACY_TUNING)}</g>`
         : "",
     )
     .join("");

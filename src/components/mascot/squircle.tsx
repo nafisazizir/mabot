@@ -1,13 +1,13 @@
 "use client";
 
-import { useId, useRef, type CSSProperties, type Ref } from "react";
+import { useEffect, useId, useRef, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
-import { halfWidth, squircleFrame, squircleSkin, type SquircleVariant } from "./squircle-geometry";
-import type { Eyes } from "./controller";
+import { halfWidth, squircleFrame, squircleSkin, tunedBody, type SquircleVariant } from "./squircle-geometry";
+import { posed, type Eyes } from "./controller";
 import { GlyphPath } from "./glyphs";
 import { svg } from "./shape";
-import { REST_POSE } from "./skins";
 import { SHAPES, type Shape } from "./squircles";
+import { DEFAULT_TUNING, type Tuning } from "./tuning";
 import { useMascot, type MascotBehavior } from "./use-mascot";
 
 /**
@@ -24,6 +24,8 @@ export const viewOf = (variant: SquircleVariant) => (2 * halfWidth(variant)) / O
 type SquircleProps = MascotBehavior & {
   /** Which of the family; defaults to the squircle. */
   shape?: Shape;
+  /** How it wears its face. Pass a stable object; a new one redraws. */
+  tuning?: Tuning;
   color: string;
   ink: string;
   eyes: Eyes;
@@ -42,6 +44,7 @@ export function Squircle(props: SquircleProps) {
 
 function SquircleBody({
   shape = "squircle",
+  tuning = DEFAULT_TUNING,
   color,
   ink,
   eyes,
@@ -54,20 +57,25 @@ function SquircleBody({
   const bodyPathRef = useRef<SVGPathElement>(null);
   const leftEyeRef = useRef<SVGGElement>(null);
   const rightEyeRef = useRef<SVGGElement>(null);
-  const variant = SHAPES[shape];
+  const variant = tunedBody(SHAPES[shape], tuning);
   const view = viewOf(variant);
+  // The animation loop reads the latest tuning from here, so sliders apply live.
+  const live = useRef({ variant, view, tuning });
+  useEffect(() => {
+    live.current = { variant, view, tuning };
+  });
   const { buttonRef, bodyRef, face, handlers } = useMascot(
     () =>
       squircleSkin(
         { body: bodyPathRef.current!, eyes: [leftEyeRef.current!, rightEyeRef.current!] },
-        view,
-        () => variant,
+        () => live.current,
       ),
     eyes,
     behavior,
+    tuning,
   );
   // Server render and first paint, before the animation loop takes over.
-  const first = squircleFrame(REST_POSE, variant);
+  const first = squircleFrame(posed(behavior.gaze), variant, tuning);
   // Eyes that slide to the edge are clipped by the silhouette, like the dot's.
   const id = useId().replace(/[^\w-]/g, "");
 
@@ -97,10 +105,10 @@ function SquircleBody({
           <path id={`${id}-body`} ref={bodyPathRef} d={first.d} style={{ fill: color }} />
           <g clipPath={`url(#${id}-clip)`}>
             <g ref={leftEyeRef} transform={first.eyes[0] ?? undefined}>
-              <GlyphPath glyph={face[0]} />
+              <GlyphPath glyph={face[0]} weight={tuning} />
             </g>
             <g ref={rightEyeRef} transform={first.eyes[1] ?? undefined}>
-              <GlyphPath glyph={face[1]} />
+              <GlyphPath glyph={face[1]} weight={tuning} />
             </g>
           </g>
         </svg>

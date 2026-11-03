@@ -9,11 +9,9 @@
 
 import { svg, toPath, type Point } from "./shape";
 import type { Pose, Skin } from "./skins";
+import { DEFAULT_TUNING, type Tuning } from "./tuning";
 
 export type Vec3 = [number, number, number];
-
-/** Eye placement on the front cap, in its units (centred, v down). */
-export type EyePlacement = { u: number; v: number; gap: number; size: number };
 
 export type SquircleVariant = {
   /** Half extents of the core; the rounding grows it by `round` all round. */
@@ -21,7 +19,6 @@ export type SquircleVariant = {
   round: number;
   /** Superellipse exponent of the front and back: 2 is an ellipse, higher is squarer. */
   exponent: number;
-  eyes: EyePlacement;
   /** Rings round each rounded edge; more keeps a big rounding smooth. */
   bevelSteps?: number;
   /** Points round the outline, a multiple of 4; more keeps a big render smooth. */
@@ -134,20 +131,31 @@ export type SquircleFrame = {
 };
 
 const DEG = 180 / Math.PI;
-/** How much of the pose's look turns the body. Stiffer than a head. */
-const LOOK = { yaw: 0.65, pitch: 0.55 };
-/**
- * How far the eyes travel across the face, as fractions of its half extents.
- * The body turns stiffly, so the eyes do most of the looking. At full travel
- * the outer eye just reaches the rounded edge, where the silhouette clips it.
- */
-const EYE_TRAVEL = { x: 0.3, y: 0.38 };
 
-/** Everything to draw for a pose. Pure, so it serves the first paint and still thumbnails too. */
-export function squircleFrame(pose: Pose, variant: SquircleVariant): SquircleFrame {
+/** A shape with a tuning's body overrides applied. */
+export function tunedBody(variant: SquircleVariant, tuning: Tuning): SquircleVariant {
+  const [a, b, c] = variant.size;
+  return {
+    ...variant,
+    exponent: tuning.exponent ?? variant.exponent,
+    size: [a, b, tuning.thickness ?? c],
+  };
+}
+
+/**
+ * Everything to draw for a pose. Pure, so it serves the first paint and still
+ * thumbnails too. The body turns stiffly (`tuning.turn`), so the eyes do most
+ * of the looking; at full travel the outer eye reaches the rounded edge,
+ * where the silhouette clips it.
+ */
+export function squircleFrame(
+  pose: Pose,
+  variant: SquircleVariant,
+  tuning: Tuning = DEFAULT_TUNING,
+): SquircleFrame {
   const t: Turn = {
-    yaw: pose.yaw * LOOK.yaw + pose.spin,
-    pitch: pose.pitch * LOOK.pitch,
+    yaw: pose.yaw * tuning.turn[0] + pose.spin,
+    pitch: pose.pitch * tuning.turn[1],
     tilt: pose.tilt,
   };
   const d = toPath(hull(rings(variant).flatMap((ring) => ring.map((p) => project(turn(p, t))))));
@@ -164,27 +172,35 @@ export function squircleFrame(pose: Pose, variant: SquircleVariant): SquircleFra
   // face on their own, ahead of the head.
   const eyes: [string | null, string | null] = [null, null];
   if (facing > 0.08) {
-    const { u, v, gap, size } = variant.eyes;
-    const glance: Point = [pose.eyeX * EYE_TRAVEL.x * a, pose.eyeY * EYE_TRAVEL.y * b];
+    const h = halfWidth(variant);
+    const gap = tuning.gap * h;
+    const size = (tuning.size * h) / 24;
+    const glance: Point = [pose.eyeX * tuning.travel[0] * a, pose.eyeY * tuning.travel[1] * b];
     // A point on the face from its own units, exact under the turn.
-    const at = ([pu, pv]: Point) => {
+    const on = ([pu, pv]: Point) => {
       const s = (pu / a + 1) / 2;
-      return project(lerp(lerp(tl, tr, s), lerp(bl, br, s), (pv / b + 1) / 2));
+      return lerp(lerp(tl, tr, s), lerp(bl, br, s), (pv / b + 1) / 2);
     };
+    const at = (p: Point) => project(on(p));
+    const centreZ = on([0, 0])[2];
     ([-1, 1] as const).forEach((side, i) => {
       const p: Point = [
-        u + side * (gap / 2 - pose.verge * 0.3 * a) + glance[0],
-        v + glance[1],
+        side * (gap / 2 - pose.verge * 0.3 * a) + glance[0],
+        tuning.drop * h + glance[1],
       ];
       const e = 1e-3;
       const [x, y] = at(p);
       const [ux, uy] = at([p[0] + e, p[1]]);
       const [vx, vy] = at([p[0], p[1] + e]);
-      // Upright: the eyes ride the face and narrow as it turns, but never skew.
-      const k = size * pose.eyeScale;
+      // The eyes narrow as the face turns and, by `ride`, roll with it in the
+      // screen plane; `lean` tips them a little further toward the look.
+      const roll = tuning.ride * Math.atan2(uy - y, ux - x) - tuning.lean * pose.eyeX;
+      // The nearer eye a touch bigger, the farther a touch smaller.
+      const near = 1 + (tuning.depth * (on(p)[2] - centreZ)) / h;
+      const k = size * pose.eyeScale * near;
       const sx = (k * Math.hypot(ux - x, uy - y)) / e;
       const sy = (k * Math.hypot(vx - x, vy - y) * pose.lid) / e;
-      eyes[i] = svg`translate(${x} ${y}) rotate(${pose.eyeRot * DEG}) scale(${sx} ${sy}) translate(-12 -12)`;
+      eyes[i] = svg`translate(${x} ${y}) rotate(${(pose.eyeRot + roll) * DEG}) scale(${sx} ${sy}) translate(-12 -12)`;
     });
   }
 
@@ -199,15 +215,18 @@ export type SquircleParts = {
 /** Writes a squircle's frame into its body path and eyes. */
 export function squircleSkin(
   els: SquircleParts,
-  view: number,
-  current: () => SquircleVariant,
+  current: () => { variant: SquircleVariant; view: number; tuning: Tuning },
 ): Skin {
   return {
     // The physics sizes its hops and bobs by this, so it's the half width
     // in px, as the dot's radius is.
-    radius: (width) => (width / view) * halfWidth(current()),
+    radius: (width) => {
+      const { variant, view } = current();
+      return (width / view) * halfWidth(variant);
+    },
     render(pose) {
-      const { d, eyes } = squircleFrame(pose, current());
+      const { variant, tuning } = current();
+      const { d, eyes } = squircleFrame(pose, variant, tuning);
       els.body.setAttribute("d", d);
       els.eyes.forEach((eye, i) => {
         const transform = eyes[i];

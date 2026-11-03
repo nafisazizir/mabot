@@ -1,5 +1,8 @@
 // Eye glyphs drawn on a 24×24 grid, centred on (12, 12). Stroked unless
-// `fill` is set, so they read like a medium-weight sans at any size.
+// `fill` is set, so they read like a medium-weight sans at any size. A `pill`
+// is one short stroke drawn fat with round ends, like the Grok bot eyes.
+
+import { DEFAULT_TUNING, type Tuning } from "./tuning";
 
 export const GLYPHS = {
   o: { d: "M12 6.5a5.5 5.5 0 1 1 0 11a5.5 5.5 0 1 1 0-11Z" },
@@ -17,28 +20,48 @@ export const GLYPHS = {
   "/": { d: "M8 19 16 5" },
   "\\": { d: "M8 5l8 14" },
   "|": { d: "M12 5v14" },
+  I: { d: "M12 7.25v9.5", pill: true },
   "@": { d: "M10 13a2 2 0 0 1 4 0a4 4 0 0 1-8 0a6 6 0 0 1 12 0" },
   "•": { d: "M12 8a4 4 0 1 1 0 8a4 4 0 1 1 0-8Z", fill: true },
   "♥": {
     d: "M12 19 4.9 12.1a4.1 4.1 0 0 1 7.1-4.6 4.1 4.1 0 0 1 7.1 4.6Z",
     fill: true,
   },
-} satisfies Record<string, { d: string; fill?: boolean }>;
+} satisfies Record<string, { d: string; fill?: boolean; pill?: boolean }>;
 
 export type Glyph = keyof typeof GLYPHS;
 
 export const GLYPH_NAMES = Object.keys(GLYPHS) as Glyph[];
 
+/** The parts of a tuning that decide how heavy a glyph is drawn. */
+export type Weight = Pick<Tuning, "stroke" | "pill" | "round">;
+
+/** How to paint a glyph: its path and, unless filled, its stroke. Shared by the live SVG and exports. */
+export function glyphStyle(glyph: Glyph, weight: Weight = DEFAULT_TUNING) {
+  const { d, fill, pill } = GLYPHS[glyph] as { d: string; fill?: boolean; pill?: boolean };
+  if (fill) return { d, fill: true as const };
+  const round = pill || weight.round;
+  return {
+    d,
+    fill: false as const,
+    width: pill ? weight.pill : weight.stroke,
+    cap: round ? ("round" as const) : ("butt" as const),
+    join: weight.round ? ("round" as const) : ("miter" as const),
+  };
+}
+
 /** The bare `<path>`, for drawing a glyph inside another SVG. */
-export function GlyphPath({ glyph }: { glyph: Glyph }) {
-  const { d, fill } = GLYPHS[glyph] as { d: string; fill?: boolean };
+export function GlyphPath({ glyph, weight }: { glyph: Glyph; weight?: Weight }) {
+  const s = glyphStyle(glyph, weight);
+  if (s.fill) return <path d={s.d} fill="currentColor" />;
   return (
     <path
-      d={d}
-      fill={fill ? "currentColor" : "none"}
-      stroke={fill ? "none" : "currentColor"}
-      strokeWidth={2.75}
-      strokeLinejoin="miter"
+      d={s.d}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={s.width}
+      strokeLinecap={s.cap}
+      strokeLinejoin={s.join}
       strokeMiterlimit={8}
     />
   );
@@ -46,14 +69,16 @@ export function GlyphPath({ glyph }: { glyph: Glyph }) {
 
 export function GlyphIcon({
   glyph,
+  weight,
   className,
 }: {
   glyph: Glyph;
+  weight?: Weight;
   className?: string;
 }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden className={className}>
-      <GlyphPath glyph={glyph} />
+      <GlyphPath glyph={glyph} weight={weight} />
     </svg>
   );
 }

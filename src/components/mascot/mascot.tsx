@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Eyes } from "./controller";
 import { GlyphIcon } from "./glyphs";
 import { sphereSkin } from "./skins";
+import { LEGACY_TUNING } from "./tuning";
 import { useMascot, type MascotBehavior } from "./use-mascot";
 
 export type { Eyes, Gaze, Mood } from "./controller";
@@ -63,10 +64,10 @@ export function Mascot({
         <span ref={faceRef} className="absolute inset-0 block">
           {/* Rest positions (±R/2) for the server render, until the loop takes over. */}
           <span ref={leftRef} className={eyeClass} style={{ transform: "translateX(-69.4%)" }}>
-            <GlyphIcon glyph={face[0]} className="size-full" />
+            <GlyphIcon glyph={face[0]} weight={LEGACY_TUNING} className="size-full" />
           </span>
           <span ref={rightRef} className={eyeClass} style={{ transform: "translateX(69.4%)" }}>
-            <GlyphIcon glyph={face[1]} className="size-full" />
+            <GlyphIcon glyph={face[1]} weight={LEGACY_TUNING} className="size-full" />
           </span>
         </span>
       </span>

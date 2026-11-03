@@ -1,11 +1,14 @@
 import { clamp, pointer, step, subscribe, type Spring } from "./engine";
 import type { Glyph } from "./glyphs";
-import type { Skin } from "./skins";
+import { REST_POSE, type Pose, type Skin } from "./skins";
 
 export type Eyes = readonly [Glyph, Glyph];
 
-/** A head direction in radians: negative yaw turns to the viewer's left, positive pitch looks up. */
-export type Gaze = { yaw: number; pitch: number };
+/**
+ * A head direction in radians: negative yaw turns to the viewer's left,
+ * positive pitch looks up, negative roll tips the head anticlockwise.
+ */
+export type Gaze = { yaw: number; pitch: number; roll?: number };
 
 /** What the agent behind the mascot is doing. */
 export type Mood = "idle" | "thinking" | "working" | "waiting" | "done" | "paused" | "error";
@@ -69,10 +72,20 @@ export const gazeEyes = (yaw: number, pitch: number): [number, number] => [
   clamp(-pitch / MAX_PITCH, -1, 1),
 ];
 
+/** At rest facing `gaze`, eyes open: the first paint, still thumbnails and exports. */
+export function posed(gaze?: Gaze): Pose {
+  const yaw = gaze?.yaw ?? 0;
+  const pitch = gaze?.pitch ?? 0;
+  const [eyeX, eyeY] = gazeEyes(yaw, pitch);
+  return { ...REST_POSE, yaw, pitch, tilt: headTilt(yaw, pitch) + (gaze?.roll ?? 0), eyeX, eyeY };
+}
+
 /** What the head and eyes are aiming for this frame. */
 type Look = {
   yaw: number;
   pitch: number;
+  /** Head roll on top of the tilt that comes with looking off-axis. */
+  roll?: number;
   verge: number;
   /** Eye position on the face; defaults to `gazeEyes` of the head. */
   eyes?: [number, number];
@@ -97,6 +110,7 @@ const sameEyes = (a: Eyes | null, b: Eyes | null) =>
 export class MascotController {
   private yaw = spring();
   private pitch = spring();
+  private roll = spring();
   private verge = spring();
   private spin = spring();
   private spinTarget = 0;
@@ -111,8 +125,8 @@ export class MascotController {
 
   // The eyes move first and the head follows: a sudden change of target holds
   // the head on its old aim for a beat.
-  private aim = { yaw: 0, pitch: 0 };
-  private lastLook = { yaw: 0, pitch: 0 };
+  private aim = { yaw: 0, pitch: 0, roll: 0 };
+  private lastLook = { yaw: 0, pitch: 0, roll: 0 };
   private headHoldUntil = 0;
   private saccade: [number, number] = [0, 0];
   private nextSaccade = 0;
@@ -130,6 +144,7 @@ export class MascotController {
   private nextBlink = performance.now() + 800 + Math.random() * 3000;
   private idleYaw = 0;
   private idlePitch = 0;
+  private idleRoll = 0;
   private nextIdle = 0;
 
   private mood: Mood;
@@ -157,7 +172,8 @@ export class MascotController {
     // Start already facing the pose rather than swinging into it.
     this.yaw.x = options.gaze?.yaw ?? 0;
     this.pitch.x = options.gaze?.pitch ?? 0;
-    this.aim = this.lastLook = { yaw: this.yaw.x, pitch: this.pitch.x };
+    this.roll.x = options.gaze?.roll ?? 0;
+    this.aim = this.lastLook = { yaw: this.yaw.x, pitch: this.pitch.x, roll: this.roll.x };
     [this.eyeX.x, this.eyeY.x] = gazeEyes(this.yaw.x, this.pitch.x);
     this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -196,6 +212,11 @@ export class MascotController {
     this.resting = false;
     // Moods swap in behind a blink, like every other face change.
     if (moodChanged) this.blink(() => this.enterMood(options.mood));
+  }
+
+  /** Redraw a mascot that has come to rest, after something its skin draws from changed. */
+  wake() {
+    this.resting = false;
   }
 
   // ── Public actions ──────────────────────────────────────────────────────
@@ -308,14 +329,23 @@ export class MascotController {
     }
 
     const gaze = this.options.gaze;
-    if (this.options.still) return { yaw: gaze?.yaw ?? 0, pitch: gaze?.pitch ?? 0, verge: 0, jitter: 0 };
+    if (this.options.still)
+      return { yaw: gaze?.yaw ?? 0, pitch: gaze?.pitch ?? 0, roll: gaze?.roll ?? 0, verge: 0, jitter: 0 };
 
     // Busy moods look at their own work rather than the cursor.
     switch (this.mood) {
       case "thinking": {
         // Eyes up in the corner, searching a little, while the head swaps sides.
         const left = now % 1600 < 800;
-        return { yaw: left ? -0.4 : 0.4, pitch: 0.3, verge: 0, eyes: [left ? -0.85 : 0.85, -0.9], jitter: 0.12 };
+        return {
+          yaw: left ? -0.4 : 0.4,
+          pitch: 0.3,
+          // A puzzled tilt toward the side it's searching.
+          roll: left ? -0.14 : 0.14,
+          verge: 0,
+          eyes: [left ? -0.85 : 0.85, -0.9],
+          jitter: 0.12,
+        };
       }
       case "working": {
         // Reading: four fixations along a line, then a sweep back to the start.
@@ -329,7 +359,9 @@ export class MascotController {
     }
 
     const idle = !pointer.inside || now - pointer.lastMove > IDLE_AFTER_MS;
-    if (this.options.follow && !idle) {
+    // Hovered, it turns from its pose to face you and follows the cursor;
+    // left, it settles back into the pose.
+    if ((this.options.follow || this.hover) && !idle) {
       const dx = pointer.x - cx;
       const dy = pointer.y - cy;
       const depth = R * 2 + 160;
@@ -350,15 +382,17 @@ export class MascotController {
       };
     }
 
-    if (gaze) return { yaw: gaze.yaw, pitch: gaze.pitch, verge: 0 };
+    if (gaze) return { yaw: gaze.yaw, pitch: gaze.pitch, roll: gaze.roll ?? 0, verge: 0 };
 
     if (now > this.nextIdle) {
       const center = Math.random() < 0.3;
       this.idleYaw = center ? 0 : (Math.random() * 2 - 1) * 0.75;
       this.idlePitch = center ? 0 : (Math.random() * 2 - 1) * 0.45;
+      // Now and then a curious tilt.
+      this.idleRoll = !center && Math.random() < 0.4 ? (Math.random() * 2 - 1) * 0.22 : 0;
       this.nextIdle = now + 900 + Math.random() * 2400;
     }
-    return { yaw: this.idleYaw, pitch: this.idlePitch, verge: 0 };
+    return { yaw: this.idleYaw, pitch: this.idlePitch, roll: this.idleRoll, verge: 0 };
   }
 
   private tick(dt: number, now: number) {
@@ -374,10 +408,11 @@ export class MascotController {
     // A jump in where to look moves the eyes at once and the head a beat later.
     const jump = Math.abs(look.yaw - this.lastLook.yaw) + Math.abs(look.pitch - this.lastLook.pitch);
     if (jump > 0.2 && !this.dragging && !calm) this.headHoldUntil = now + 140;
-    this.lastLook = { yaw: look.yaw, pitch: look.pitch };
+    this.lastLook = { yaw: look.yaw, pitch: look.pitch, roll: look.roll ?? 0 };
     if (now >= this.headHoldUntil) this.aim = this.lastLook;
     step(this.yaw, this.aim.yaw, 140, 17, dt);
     step(this.pitch, this.aim.pitch, 140, 17, dt);
+    step(this.roll, this.aim.roll, 110, 15, dt);
     step(this.verge, look.verge, 120, 18, dt);
     step(this.spin, this.spinTarget, 36, 7.5, dt);
     if (
@@ -502,7 +537,7 @@ export class MascotController {
         verge: this.verge.x,
         spin: this.spin.x,
         lid,
-        tilt: headTilt(this.yaw.x, this.pitch.x),
+        tilt: headTilt(this.yaw.x, this.pitch.x) + this.roll.x,
         eyeRot: this.eyeRot.x,
         eyeX: this.eyeX.x,
         // Eyes dip a little as they close.
@@ -518,6 +553,7 @@ export class MascotController {
       !this.pendingReaction &&
       settled(this.yaw, look.yaw) &&
       settled(this.pitch, look.pitch) &&
+      settled(this.roll, look.roll ?? 0) &&
       settled(this.verge, look.verge) &&
       settled(this.spin, this.spinTarget) &&
       settled(this.eyeRot, 0) &&
