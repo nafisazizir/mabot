@@ -21,7 +21,7 @@ const PILL: Eyes = ["I", "I"];
 
 const ITERATIONS: Iteration[] = [
   { id: "before", name: "Before", note: "Wide-set, centred, thin, always upright", tuning: LEGACY_TUNING },
-  { id: "tuned", name: "Tuned", note: "Closer, a little low, heavier, rides the face", tuning: DEFAULT_TUNING },
+  { id: "tuned", name: "Tuned", note: "Before's eyes, closer, a little low, riding the face", tuning: DEFAULT_TUNING },
   {
     id: "round",
     name: "Tuned · round",
@@ -32,7 +32,7 @@ const ITERATIONS: Iteration[] = [
     id: "low",
     name: "Low & close",
     note: "More forehead and a tighter pair: younger",
-    tuning: { ...DEFAULT_TUNING, gap: 0.64, size: 0.58, drop: 0.2, stroke: 3.9 },
+    tuning: { ...DEFAULT_TUNING, gap: 0.64, size: 0.64, drop: 0.2 },
   },
   {
     id: "bold",
