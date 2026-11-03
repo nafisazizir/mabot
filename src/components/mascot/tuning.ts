@@ -33,8 +33,8 @@ export type Tuning = {
 };
 
 /**
- * Close-set, a little low and heavier than the DevDay glyphs, after the Grok
- * bot marks: their pills are about 0.23 of the body tall and 0.10 wide, with
+ * Close-set, a little low and heavier than the DevDay glyphs but just as
+ * crisp, spaced and placed after the Grok bot marks: their pills are about 0.23 of the body tall and 0.10 wide, with
  * centres 0.22 apart. Glyphs like `*` and `^` are wider than a pill, so they
  * need a wider gap than that to stay apart.
  */
@@ -44,7 +44,8 @@ export const DEFAULT_TUNING: Tuning = {
   drop: 0.1,
   stroke: 3.6,
   pill: 7.5,
-  round: true,
+  // Crisp, typographic glyphs like the DevDay faces; pills stay round anyway.
+  round: false,
   travel: [0.39, 0.5],
   ride: 1,
   lean: 0.12,

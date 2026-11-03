@@ -23,6 +23,12 @@ const ITERATIONS: Iteration[] = [
   { id: "before", name: "Before", note: "Wide-set, centred, thin, always upright", tuning: LEGACY_TUNING },
   { id: "tuned", name: "Tuned", note: "Closer, a little low, heavier, rides the face", tuning: DEFAULT_TUNING },
   {
+    id: "round",
+    name: "Tuned · round",
+    note: "The same with round caps and joins",
+    tuning: { ...DEFAULT_TUNING, round: true },
+  },
+  {
     id: "low",
     name: "Low & close",
     note: "More forehead and a tighter pair: younger",
