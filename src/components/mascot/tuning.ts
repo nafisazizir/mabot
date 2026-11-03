@@ -52,9 +52,9 @@ export const DEFAULT_TUNING: Tuning = {
   travel: [0.39, 0.5],
   ride: 1,
   lean: 0.12,
-  // Both eyes the same size: a near/far difference reads as lopsided, and the
-  // Grok marks keep theirs equal (they only narrow as the face turns).
-  depth: 0,
+  // The nearer eye only a touch bigger: 5% taller in the profile pose, 11%
+  // at a full turn. Much more reads as lopsided rather than as depth.
+  depth: 0.2,
   turn: [0.65, 0.55],
 };
 
