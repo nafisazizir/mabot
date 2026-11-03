@@ -33,7 +33,7 @@ export type Tuning = {
 };
 
 /**
- * The DevDay glyphs as they were, crisp and light, but placed after the Grok
+ * The DevDay glyphs, crisp and light, a little larger and placed after the Grok
  * bot marks: close-set, a little low, riding the face as it turns. Their
  * pills are about 0.23 of the body tall and 0.10 wide, with centres 0.22
  * apart; glyphs like `*` and `^` are wider than a pill, so they need a wider
@@ -41,7 +41,9 @@ export type Tuning = {
  */
 export const DEFAULT_TUNING: Tuning = {
   gap: 0.72,
-  size: 0.72,
+  // A touch bigger than the DevDay glyphs: an asterisk is airy and reads
+  // smaller than a solid pill, and the Grok eyes run 0.23–0.28 of the body.
+  size: 0.8,
   drop: 0.1,
   stroke: 2.75,
   pill: 7.5,

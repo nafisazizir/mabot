@@ -76,11 +76,12 @@ export const MOODS: { mood: Mood; name: string; hint: string }[] = [
 ];
 
 /**
- * The profile picture: three-quarters, glancing up and to the right, tipped
- * anticlockwise, like the Grok bot marks. About 17° of roll all told, with
- * the tilt that comes from looking off-axis.
+ * The profile picture: three-quarters, glancing a little up and to the right,
+ * tipped anticlockwise, like the Grok bot marks. The body turns about 15°,
+ * looks up about 6° and rolls about 11° with the tilt from looking off-axis.
+ * Looking up any further tips the face back and away from you.
  */
-export const PROFILE: Gaze = { yaw: 0.5, pitch: 0.35, roll: -0.2 };
+export const PROFILE: Gaze = { yaw: 0.4, pitch: 0.2, roll: -0.15 };
 
 // Where the head rests when it isn't following the cursor. No gaze means it
 // looks around on its own. Hovered, it turns to face you either way.
