@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import Link from "next/link";
-import { IconDownload, IconEye, IconFlask, IconPointer, IconPointerFilled, IconRotate360 } from "@tabler/icons-react";
+import { IconDownload, IconEye, IconPointer, IconPointerFilled, IconRotate360 } from "@tabler/icons-react";
 import { useTheme } from "next-themes";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { FieldLegend, FieldSet } from "@/components/ui/field";
 import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
@@ -164,10 +163,6 @@ export function Playground() {
                 </Button>
               }
             />
-            <Link href="/lab" className={buttonVariants({ variant: "ghost", size: "sm", shape: "rounded" })}>
-              <IconFlask data-icon="inline-start" />
-              Lab
-            </Link>
           </div>
         </main>
 

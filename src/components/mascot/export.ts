@@ -5,10 +5,10 @@ import { moodFace, posed, type Eyes, type Gaze, type Mood } from "./controller";
 import { faceTuning, glyphStyle, type Glyph, type Weight } from "./glyphs";
 import { svg } from "./shape";
 import { sphereEyes } from "./skins";
-import { squircleFrame, tunedBody } from "./squircle-geometry";
+import { squircleFrame } from "./squircle-geometry";
 import { SHAPES } from "./squircles";
 import { viewOf } from "./squircle";
-import { DEFAULT_TUNING, LEGACY_TUNING, type Tuning } from "./tuning";
+import { DEFAULT_TUNING, LEGACY_TUNING } from "./tuning";
 
 export type Still = {
   variant: "squircle" | "mini" | "dot";
@@ -17,8 +17,6 @@ export type Still = {
   eyes: Eyes;
   mood: Mood;
   gaze?: Gaze;
-  /** The squircle family's face; the dot keeps its DevDay glyphs. */
-  tuning?: Tuning;
 };
 
 /** The dot's radius in its viewBox. */
@@ -60,19 +58,19 @@ export type Framing = {
 };
 
 /** The mascot's drawing, centred on the origin, with the half width of the square that holds it. */
-function draw({ variant, color, ink, eyes, mood, gaze, tuning = DEFAULT_TUNING }: Still) {
+function draw({ variant, color, ink, eyes, mood, gaze }: Still) {
   const fill = resolve(color);
   const stroke = resolve(ink);
   const face = moodFace(mood, 0) ?? eyes;
   const pose = posed(gaze);
 
   if (variant !== "dot") {
-    const shape = tunedBody(SHAPES[variant], tuning);
-    const frame = squircleFrame(pose, shape, faceTuning(face, tuning));
+    const shape = SHAPES[variant];
+    const frame = squircleFrame(pose, shape, faceTuning(face, DEFAULT_TUNING));
     // Turned, it can reach past its box, so fit the box to the silhouette.
     const extent = Math.max(...(frame.d.match(/-?\d+(\.\d+)?/g) ?? []).map((n) => Math.abs(+n)));
     const eyeGroups = frame.eyes
-      .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke, tuning)}</g>` : ""))
+      .map((t, i) => (t ? `<g transform="${t}">${glyph(face[i], stroke, DEFAULT_TUNING)}</g>` : ""))
       .join("");
     return {
       half: Math.max(viewOf(shape) / 2, extent * 1.06),

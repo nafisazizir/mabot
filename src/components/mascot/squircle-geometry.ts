@@ -132,16 +132,6 @@ export type SquircleFrame = {
 
 const DEG = 180 / Math.PI;
 
-/** A shape with a tuning's body overrides applied. */
-export function tunedBody(variant: SquircleVariant, tuning: Tuning): SquircleVariant {
-  const [a, b, c] = variant.size;
-  return {
-    ...variant,
-    exponent: tuning.exponent ?? variant.exponent,
-    size: [a, b, tuning.thickness ?? c],
-  };
-}
-
 /**
  * Everything to draw for a pose. Pure, so it serves the first paint and still
  * thumbnails too. The body turns stiffly (`tuning.turn`), so the eyes do most

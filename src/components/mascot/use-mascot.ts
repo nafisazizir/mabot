@@ -34,8 +34,6 @@ export function useMascot(
   createSkin: () => Skin,
   eyes: Eyes,
   { follow = true, float = true, mood = "idle", gaze, still = false, ref }: MascotBehavior,
-  /** Anything else the skin draws from; a new value redraws a mascot that's come to rest. */
-  look?: unknown,
 ) {
   const buttonRef = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLSpanElement>(null);
@@ -57,10 +55,6 @@ export function useMascot(
   useEffect(() => {
     controller.current?.update({ follow, float, eyes, mood, gaze, still });
   }, [follow, float, eyes, mood, gaze, still]);
-
-  useEffect(() => {
-    controller.current?.wake();
-  }, [look]);
 
   useImperativeHandle(ref, () => ({
     spin: () => controller.current?.poke(),

@@ -2,12 +2,12 @@
 
 import { useEffect, useId, useRef, type CSSProperties, type Ref } from "react";
 import { cn } from "@/lib/utils";
-import { halfWidth, squircleFrame, squircleSkin, tunedBody, type SquircleVariant } from "./squircle-geometry";
+import { halfWidth, squircleFrame, squircleSkin, type SquircleVariant } from "./squircle-geometry";
 import { posed, type Eyes } from "./controller";
 import { faceTuning, GlyphPath } from "./glyphs";
 import { svg } from "./shape";
 import { SHAPES, type Shape } from "./squircles";
-import { DEFAULT_TUNING, type Tuning } from "./tuning";
+import { DEFAULT_TUNING } from "./tuning";
 import { useMascot, type MascotBehavior } from "./use-mascot";
 
 /**
@@ -24,8 +24,6 @@ export const viewOf = (variant: SquircleVariant) => (2 * halfWidth(variant)) / O
 type SquircleProps = MascotBehavior & {
   /** Which of the family; defaults to the squircle. */
   shape?: Shape;
-  /** How it wears its face. Pass a stable object; a new one redraws. */
-  tuning?: Tuning;
   color: string;
   ink: string;
   eyes: Eyes;
@@ -44,7 +42,6 @@ export function Squircle(props: SquircleProps) {
 
 function SquircleBody({
   shape = "squircle",
-  tuning = DEFAULT_TUNING,
   color,
   ink,
   eyes,
@@ -57,10 +54,10 @@ function SquircleBody({
   const bodyPathRef = useRef<SVGPathElement>(null);
   const leftEyeRef = useRef<SVGGElement>(null);
   const rightEyeRef = useRef<SVGGElement>(null);
-  const variant = tunedBody(SHAPES[shape], tuning);
+  const variant = SHAPES[shape];
   const view = viewOf(variant);
-  // The animation loop reads the latest tuning from here, so sliders apply live.
-  const live = useRef({ variant, view, tuning });
+  // The animation loop reads the face's spacing from here, so it follows face changes.
+  const live = useRef({ variant, view, tuning: DEFAULT_TUNING });
   const { buttonRef, bodyRef, face, handlers } = useMascot(
     () =>
       squircleSkin(
@@ -69,10 +66,9 @@ function SquircleBody({
       ),
     eyes,
     behavior,
-    tuning,
   );
   // Spaced for the eyes on show, so a face change re-spaces them behind its blink.
-  const worn = faceTuning(face, tuning);
+  const worn = faceTuning(face, DEFAULT_TUNING);
   useEffect(() => {
     live.current = { variant, view, tuning: worn };
   });
@@ -107,10 +103,10 @@ function SquircleBody({
           <path id={`${id}-body`} ref={bodyPathRef} d={first.d} style={{ fill: color }} />
           <g clipPath={`url(#${id}-clip)`}>
             <g ref={leftEyeRef} transform={first.eyes[0] ?? undefined}>
-              <GlyphPath glyph={face[0]} weight={tuning} />
+              <GlyphPath glyph={face[0]} weight={DEFAULT_TUNING} />
             </g>
             <g ref={rightEyeRef} transform={first.eyes[1] ?? undefined}>
-              <GlyphPath glyph={face[1]} weight={tuning} />
+              <GlyphPath glyph={face[1]} weight={DEFAULT_TUNING} />
             </g>
           </g>
         </svg>

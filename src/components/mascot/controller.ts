@@ -214,11 +214,6 @@ export class MascotController {
     if (moodChanged) this.blink(() => this.enterMood(options.mood));
   }
 
-  /** Redraw a mascot that has come to rest, after something its skin draws from changed. */
-  wake() {
-    this.resting = false;
-  }
-
   // ── Public actions ──────────────────────────────────────────────────────
 
   blink(onClosed?: () => void) {

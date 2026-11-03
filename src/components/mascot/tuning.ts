@@ -26,10 +26,6 @@ export type Tuning = {
   depth: number;
   /** How much of the look turns the body, yaw then pitch. The eyes do the rest. */
   turn: [number, number];
-  /** Body overrides; omitted keeps the shape's own. Superellipse exponent: higher is squarer. */
-  exponent?: number;
-  /** Body overrides; half depth front to back. */
-  thickness?: number;
 };
 
 /**
